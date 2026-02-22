@@ -38,7 +38,20 @@ export type Map = {
     /** 線の名前 */
     name: string | undefined
     /** 経由地点リスト */
-    waypoints: [lat: number, lng: number][]
+    waypoints: {
+      /** 経由地点の名前 */
+      name: string | undefined
+      /** 経由地点の説明 */
+      description: string | undefined
+      /** 経由地点のアイコン画像URL */
+      iconImg: string | undefined
+      /** 経由地点のアイコンMdi */
+      iconMdi: string | undefined
+      /** 経由地点のアイコンの色 */
+      iconColor: string | undefined
+      /** 経由地点の位置 */
+      latlng: [lat: number, lng: number]
+    }[]
     /** 線の色 */
     color: string | undefined
     /** 線の太さ */

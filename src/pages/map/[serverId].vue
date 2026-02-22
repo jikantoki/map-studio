@@ -37,19 +37,58 @@ div(style="height: 100%; width: 100%")
     LPolyline(
       v-for="(line, lineIndex) in mapData.lines"
       :key="`line-${lineIndex}`"
-      :lat-lngs="catmullRomSpline(line.waypoints)"
+      :lat-lngs="catmullRomSpline(line.waypoints.map(w => w.latlng))"
       :color="line.color ?? '#3388ff'"
       :weight="line.width ?? 4"
       @click="editMode ? (selectedLine = line, selectedLineIndex = lineIndex) : null"
     )
+    //- 編集モード時の経由地点マーカー
+    template(v-if="editMode")
+      LMarker(
+        v-for="(wp, wpIdx) in linesWaypointsFlat"
+        :key="`wp-${wp.lineIdx}-${wp.wpIdx}`"
+        :lat-lng="wp.latlng"
+        @click.stop="openWaypointEditor(wp.lineIdx, wp.wpIdx)"
+      )
+        LIcon(
+          :icon-size="[0,0]"
+          style="border: none;"
+          :icon-anchor="[12, 12]"
+        )
+          div(style="display: flex; align-items: center; width: auto;")
+            .icon-wrap(
+              v-if="wp.waypoint.iconMdi"
+              style="display: flex; align-items: center; justify-content: center; height: 24px; width: 24px; border-radius: 9999px; background-color: white; border: solid 2px #3388ff;"
+            )
+              Icon(
+                :data="wp.waypoint.iconMdi"
+                size="16px"
+                :style="`color: ${wp.waypoint.iconColor ? wp.waypoint.iconColor : '#3388ff'}`"
+              )
+            .wp-dot(
+              v-else
+              style="height: 14px; width: 14px; border-radius: 9999px; background-color: white; border: solid 3px #3388ff;"
+            )
     //- 描画中の線
     LPolyline(
       v-if="drawingLine && drawingLine.waypoints.length >= 2"
-      :lat-lngs="catmullRomSpline(drawingLine.waypoints)"
+      :lat-lngs="catmullRomSpline(drawingLine.waypoints.map(w => w.latlng))"
       color="#ff4444"
       :weight="4"
       :dash-array="'10, 5'"
     )
+    //- 描画中の経由地点マーカー
+    LMarker(
+      v-for="(wp, wpIdx) in (drawingLine ? drawingLine.waypoints : [])"
+      :key="`drawing-wp-${wpIdx}`"
+      :lat-lng="wp.latlng"
+    )
+      LIcon(
+        :icon-size="[0,0]"
+        style="border: none;"
+        :icon-anchor="[7, 7]"
+      )
+        .wp-dot(style="height: 14px; width: 14px; border-radius: 9999px; background-color: white; border: solid 3px #ff4444;")
     LMarker(
       v-for="(mapPoint, index) in mapData.points"
       :key="index"
@@ -492,7 +531,7 @@ div(style="height: 100%; width: 100%")
           prepend-icon="mdi-check"
           ) ええで！
   //- 選択した線の編集カード
-  .selected-line-card(v-if="selectedLine && editMode")
+  .selected-line-card(v-if="selectedLine && editMode && !selectedWaypoint")
     v-card(
       style="position: fixed; bottom: 0; left: 0; z-index: 1000; width: 100%; border-radius: 16px 16px 0 0;"
     )
@@ -544,6 +583,88 @@ div(style="height: 100%; width: 100%")
         v-btn.my-2(
           text
           @click="selectedLine = null; selectedLineIndex = -1"
+          prepend-icon="mdi-close"
+          style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
+        ) 閉じる
+        .my-4
+  //- 選択した経由地点の編集カード
+  .selected-waypoint-card(v-if="selectedWaypoint && editMode")
+    v-card(
+      style="position: fixed; bottom: 0; left: 0; z-index: 1001; width: 100%; border-radius: 16px 16px 0 0;"
+    )
+      v-card-actions
+        p.ml-2(style="display: flex; align-items: center;")
+          v-icon.mr-2 mdi-map-marker-path
+          span 経由地点を編集
+        v-spacer
+        v-btn(
+          text
+          @click="selectedWaypoint = null"
+          icon="mdi-close"
+          )
+      v-card-text
+        .info
+          v-icon mdi-image
+          .icon-settings(
+            style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
+          )
+            p アイコンを設定
+            Vue3IconPicker(
+              v-model="selectedWaypoint.iconMdi"
+              searchPlaceholder="アイコン名で検索…"
+              placeholder="アイコンを選択"
+              :theme="$vuetify.theme.global.name"
+              selectedIconBgColor="rgb(var(--v-theme-primary))"
+              selectedIconColor="white"
+              inputSize="large"
+              valueType="name"
+              iconLibrary="material"
+            )
+            p アイコン名: {{ selectedWaypoint.iconMdi }}
+        .info.mt-4.mb-6
+          v-icon mdi-palette
+          v-btn(
+            :style="`background-color: ${selectedWaypoint.iconColor ? selectedWaypoint.iconColor : 'rgb(var(--v-theme-primary))'}; color: white;`"
+          ) 色を選択
+            v-menu(
+              activator="parent"
+              location="bottom"
+            )
+              v-color-picker(
+                v-model="selectedWaypoint.iconColor"
+                show-swatches
+                hide-canvas
+                hide-inputs
+                hide-mode-switch
+                mode="hexa"
+                @click.stop
+              )
+        .info
+          v-icon mdi-tag
+          v-text-field(
+            v-model="selectedWaypoint.name"
+            label="名前"
+            placeholder="例: 休憩ポイント"
+            variant="outlined"
+            style="flex: 1;"
+            clearable
+          )
+        .info
+          v-icon mdi-text-box-edit-outline
+          v-textarea(
+            v-model="selectedWaypoint.description"
+            label="説明"
+            placeholder="例: 公園の入口"
+            variant="outlined"
+            style="flex: 1;"
+            clearable
+            auto-grow
+            rows="1"
+            max-rows="5"
+          )
+        v-btn.my-2(
+          text
+          @click="selectedWaypoint = null"
           prepend-icon="mdi-close"
           style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
         ) 閉じる
@@ -601,6 +722,15 @@ div(style="height: 100%; width: 100%")
   import { useSettingsStore } from '@/stores/settings'
   import 'leaflet/dist/leaflet.css'
   import 'vue3-icon-picker/dist/style.css'
+
+  type Waypoint = {
+    name: string | undefined
+    description: string | undefined
+    iconImg: string | undefined
+    iconMdi: string | undefined
+    iconColor: string | undefined
+    latlng: [number, number]
+  }
 
   export default {
     components: {
@@ -660,11 +790,13 @@ div(style="height: 100%; width: 100%")
         /** ルートパラメータ（URLパラメータ） */
         params: '',
         /** 描画中の線 */
-        drawingLine: null as { waypoints: [number, number][] } | null,
+        drawingLine: null as { waypoints: Waypoint[] } | null,
         /** 編集中の線 */
-        selectedLine: null as { name: string | undefined, waypoints: [number, number][], color: string | undefined, width: number | undefined } | null,
+        selectedLine: null as { name: string | undefined, waypoints: Waypoint[], color: string | undefined, width: number | undefined } | null,
         /** 編集中の線のインデックス */
         selectedLineIndex: -1,
+        /** 編集中の経由地点 */
+        selectedWaypoint: null as Waypoint | null,
       }
     },
     computed: {
@@ -677,6 +809,16 @@ div(style="height: 100%; width: 100%")
           return true
         }
         return false
+      },
+      /** 全ての線の経由地点を線インデックス・地点インデックス付きでフラット化 */
+      linesWaypointsFlat () {
+        const result: { lineIdx: number, wpIdx: number, latlng: [number, number], waypoint: Waypoint }[] = []
+        for (const [lineIdx, line] of this.mapData.lines.entries()) {
+          for (const [wpIdx, wp] of line.waypoints.entries()) {
+            result.push({ lineIdx, wpIdx, latlng: wp.latlng, waypoint: wp })
+          }
+        }
+        return result
       },
     },
     watch: {
@@ -707,6 +849,7 @@ div(style="height: 100%; width: 100%")
         this.drawingLine = null
         this.selectedLine = null
         this.selectedLineIndex = -1
+        this.selectedWaypoint = null
 
         if (!newEditMode && this.params === 'create') {
           this.$router.back()
@@ -781,6 +924,9 @@ div(style="height: 100%; width: 100%")
         } else if (this.drawingLine) {
           /** 線描画モードをキャンセルする */
           this.cancelDrawingLine()
+        } else if (this.selectedWaypoint) {
+          /** 経由地点編集カードを閉じる */
+          this.selectedWaypoint = null
         } else if (this.detailCardTarget) {
           /** 詳細カードを閉じる */
           this.detailCardTarget = null
@@ -846,7 +992,14 @@ div(style="height: 100%; width: 100%")
 
         /** 線描画モード中は経由地点を追加 */
         if (this.drawingLine) {
-          this.drawingLine.waypoints.push([latlng.lat, latlng.lng])
+          this.drawingLine.waypoints.push({
+            latlng: [latlng.lat, latlng.lng],
+            name: undefined,
+            description: undefined,
+            iconImg: undefined,
+            iconMdi: undefined,
+            iconColor: undefined,
+          })
           return
         }
 
@@ -904,7 +1057,14 @@ div(style="height: 100%; width: 100%")
       startDrawingLine (point: { latlng: [number, number] }) {
         this.detailCardTarget = null
         this.drawingLine = {
-          waypoints: [[point.latlng[0], point.latlng[1]]],
+          waypoints: [{
+            latlng: [point.latlng[0], point.latlng[1]],
+            name: undefined,
+            description: undefined,
+            iconImg: undefined,
+            iconMdi: undefined,
+            iconColor: undefined,
+          }],
         }
       },
       /** 線描画を完了する */
@@ -924,6 +1084,14 @@ div(style="height: 100%; width: 100%")
       /** 線描画をキャンセルする */
       cancelDrawingLine () {
         this.drawingLine = null
+      },
+      /** 経由地点の編集カードを開く */
+      openWaypointEditor (lineIdx: number, wpIdx: number) {
+        const wp = this.mapData.lines[lineIdx]?.waypoints[wpIdx]
+        if (wp) {
+          this.selectedWaypoint = wp
+          this.selectedLine = null
+        }
       },
       /**
        * Catmull-Romスプライン補間で滑らかな曲線の座標列を生成する
