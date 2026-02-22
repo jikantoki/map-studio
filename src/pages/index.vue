@@ -15,25 +15,24 @@ div(style="height: 100%; width: 100%")
       attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
     )
     //- 自分の現在地マーカー
-    MarkerCluster
-      LMarker(
-        :lat-lng="myLocation"
-        @click="detailCardTarget = myProfile"
+    LMarker(
+      :lat-lng="myLocation"
+      @click="detailCardTarget = myProfile"
+      )
+      LIcon(
+        :icon-size="[0,0]"
+        style="border: none;"
+        :icon-anchor="[16, 16]"
         )
-        LIcon(
-          :icon-size="[0,0]"
-          style="border: none;"
-          :icon-anchor="[16, 16]"
-          )
-          div(style="display: flex; align-items: center; width: auto;")
-            img(
-              loading="lazy"
-              :src="myProfile?.icon ?? '/account_default.jpg'"
-              style="height: 32px; width: 32px; border-radius: 9999px; border: solid 1px #000;"
-              onerror="this.src='/account_default.jpg'"
-              )
-            p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
-              span(v-if="myProfile") {{ myProfile.name ?? myProfile.userId }}
+        div(style="display: flex; align-items: center; width: auto;")
+          img(
+            loading="lazy"
+            :src="myProfile?.icon ?? '/account_default.jpg'"
+            style="height: 32px; width: 32px; border-radius: 9999px; border: solid 1px #000;"
+            onerror="this.src='/account_default.jpg'"
+            )
+          p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
+            span(v-if="myProfile") {{ myProfile.name ?? myProfile.userId }}
   //-- 下部のアクションバー --
   .action-bar
     .buttons
@@ -335,7 +334,6 @@ div(style="height: 100%; width: 100%")
   import { Geolocation } from '@capacitor/geolocation'
   import { Share } from '@capacitor/share'
   import { LIcon, LMap, LMarker, LTileLayer } from '@vue-leaflet/vue-leaflet'
-  import MarkerCluster from '@/components/MarkerCluster.vue'
 
   import muniArray from '@/js/muni'
   // @ts-ignore
@@ -350,7 +348,6 @@ div(style="height: 100%; width: 100%")
       LMarker,
       LTileLayer,
       LIcon,
-      MarkerCluster,
     },
     mixins: [mixins],
     data () {
