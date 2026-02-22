@@ -405,6 +405,14 @@ div(style="height: 100%; width: 100%")
             style="background-color: rgb(var(--v-theme-primary)); color: white;"
           ) 保存
           hr.my-4
+        v-btn.my-2(
+          v-if="isEditorable"
+          :disabled="mapData.serverId === '' || mapData.name === '' || myProfile.guest"
+          text
+          @click="Toast.show({ text: '未実装' })"
+          append-icon="mdi-upload"
+          style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
+        ) サーバーにアップロード
         v-list.options-list
           v-list-item.item( @click="share(`https://map.enoki.xyz/map/${mapData.serverId}`, mapData.name)" )
             .icon-and-text
@@ -739,6 +747,7 @@ div(style="height: 100%; width: 100%")
         // オフライン保存の場合はそのまま保存してよいが、オンライン保存の場合はサーバーに保存してから保存完了とする
         // また、オンライン保存の場合はIDの重複を避けるため、IDが重複していないか確認する
         // 一旦オフラインへ保存し、公開ボタンは別で用意する
+        // 一回でもサーバーにアップロードしたものは、保存時にサーバーにも保存するようにする
 
         let cnt = 0
         let found = false

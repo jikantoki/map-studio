@@ -12,7 +12,6 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     CommonSplash: typeof import('./components/common/commonSplash.vue')['default']
-    MarkerCluster: typeof import('./components/MarkerCluster.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }
