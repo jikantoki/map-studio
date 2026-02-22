@@ -27,8 +27,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="mapstudio.enoki.xyz" />
-                <data android:scheme="https" android:host="np.enoki.xyz" android:pathPrefix="/user/" />
+                <data android:scheme="https" android:host="map.enoki.xyz" />
             </intent-filter>
 
             <!-- ここからカスタムプロトコル enoki:// の設定 -->

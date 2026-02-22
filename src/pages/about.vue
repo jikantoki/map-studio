@@ -31,12 +31,12 @@ v-card(
         v-btn.ml-2(
           text
           append-icon="mdi-web"
-          @click="openURL('https://mapstudio.enoki.xyz')"
+          @click="openURL('https://map.enoki.xyz')"
         ) ホームページ
     .settings-list
       .setting-item(
         v-ripple
-        @click="openURL('https://mapstudio.enoki.xyz')"
+        @click="openURL('https://map.enoki.xyz')"
         )
         .icon
           v-icon mdi-application-outline

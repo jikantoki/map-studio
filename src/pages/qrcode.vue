@@ -146,7 +146,7 @@ v-dialog(
         handler: async function () {
           await setTimeout(() => {}, 50)
           this.qrLoading = true
-          this.myLink = `https://mapstudio.enoki.xyz/user/${this.myProfile.userId}?openExternalBrowser=1`
+          this.myLink = `https://map.enoki.xyz/user/${this.myProfile.userId}?openExternalBrowser=1`
 
           const canvas = document.querySelector('#qr-canvas') as any
           if (!canvas) {

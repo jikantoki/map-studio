@@ -935,7 +935,7 @@ div(style="height: 100%; width: 100%")
             /** 取得した情報をサーバーに送信 */
             try {
               await CapacitorHttp.post({
-                url: 'https://api.mapstudio.enoki.xyz/updateGeoLocation.php',
+                url: 'https://api.map.enoki.xyz/updateGeoLocation.php',
                 headers: {
                   'Content-Type': 'application/json',
                   'id': this.myProfile.userId,

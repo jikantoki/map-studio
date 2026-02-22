@@ -274,7 +274,7 @@ v-dialog(v-model="followDialogMessage")
         this.userData = JSON.parse(localUserData)
       }
 
-      this.myLink = `https://mapstudio.enoki.xyz/user/${userId}?openExternalBrowser=1`
+      this.myLink = `https://map.enoki.xyz/user/${userId}?openExternalBrowser=1`
 
       setTimeout(() => {
         const canvas = document.querySelector('#qr-canvas') as HTMLCanvasElement

@@ -25,12 +25,12 @@ const config: CapacitorConfig = {
     },
   },
   server: {
-    hostname: 'mapstudio.enoki.xyz',
+    hostname: 'map.enoki.xyz',
     androidScheme: 'https',
   },
   deepLinks: {
     enabled: true,
-    prefixes: ['mapstudio://', 'https://mapstudio.enoki.xyz'],
+    prefixes: ['mapstudio://', 'https://map.enoki.xyz'],
   },
   android: {
     useLegacyBridge: true,
