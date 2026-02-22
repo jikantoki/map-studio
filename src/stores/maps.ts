@@ -33,6 +33,17 @@ export type Map = {
     /** 追加・編集した人のユーザーID */
     authorUserId: string | undefined
   }[]
+  /** 線リスト */
+  lines: {
+    /** 線の名前 */
+    name: string | undefined
+    /** 経由地点リスト */
+    waypoints: [lat: number, lng: number][]
+    /** 線の色 */
+    color: string | undefined
+    /** 線の太さ */
+    width: number | undefined
+  }[]
   /** 閲覧可能ユーザーIDリスト（isPublicがtrueの場合に有効） */
   sharedUserIds: string[]
   /** 編集可能ユーザーIDリスト */

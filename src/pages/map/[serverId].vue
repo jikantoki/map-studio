@@ -33,11 +33,28 @@ div(style="height: 100%; width: 100%")
             )
           p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
             span(v-if="myProfile") {{ myProfile.name ?? myProfile.userId }}
+    //- 描画済みの線
+    LPolyline(
+      v-for="(line, lineIndex) in mapData.lines"
+      :key="`line-${lineIndex}`"
+      :lat-lngs="catmullRomSpline(line.waypoints)"
+      :color="line.color ?? '#3388ff'"
+      :weight="line.width ?? 4"
+      @click="editMode ? (selectedLine = line, selectedLineIndex = lineIndex) : null"
+    )
+    //- 描画中の線
+    LPolyline(
+      v-if="drawingLine && drawingLine.waypoints.length >= 2"
+      :lat-lngs="catmullRomSpline(drawingLine.waypoints)"
+      color="#ff4444"
+      :weight="4"
+      :dash-array="'10, 5'"
+    )
     LMarker(
       v-for="(mapPoint, index) in mapData.points"
       :key="index"
       :lat-lng="mapPoint.latlng"
-      @click="detailCardTarget = mapPoint"
+      @click="!drawingLine ? detailCardTarget = mapPoint : null"
       )
       LIcon(
         :icon-size="[0,0]"
@@ -139,11 +156,34 @@ div(style="height: 100%; width: 100%")
           )
   //- 編集モードであることを表示
   .edit-mode-indicator.py-2(
-    v-if="editMode"
+    v-if="editMode && !drawingLine"
     style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000; width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
     )
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
     p 編集モード
+  //- 線描画中の案内バナー
+  .drawing-line-banner(
+    v-if="drawingLine"
+    style="position: fixed; top: calc(32px - 6px); left: 50%; transform: translateX(-50%); z-index: 1000; white-space: nowrap; text-align: center; background-color: rgba(220, 50, 50, 0.9); color: white; border-radius: 9999px; font-size: 1em; padding: 0.4em 1.2em;"
+    )
+    .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+    p 地図をタップして経由地点を追加
+  //- 線描画中の完了・キャンセルボタン
+  .drawing-line-actions(
+    v-if="drawingLine"
+    style="position: fixed; bottom: calc(5em + 16px); left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; gap: 8px; white-space: nowrap;"
+    )
+    v-btn(
+      @click="cancelDrawingLine"
+      prepend-icon="mdi-close"
+      style="background-color: rgba(var(--v-theme-surface), 0.95);"
+    ) キャンセル
+    v-btn(
+      @click="finishDrawingLine"
+      :disabled="!drawingLine || drawingLine.waypoints.length < 2"
+      prepend-icon="mdi-check"
+      style="background-color: rgb(var(--v-theme-primary)); color: white;"
+    ) 完了
   //- 地図で押したアカウントの詳細カード
   .detail-card-target
     v-card(
@@ -257,6 +297,13 @@ div(style="height: 100%; width: 100%")
           prepend-icon="mdi-map-marker"
           style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
         ) Google Mapsで開く
+        v-btn.my-2(
+          v-if="editMode"
+          text
+          @click="startDrawingLine(detailCardTarget)"
+          prepend-icon="mdi-vector-line"
+          style="background-color: rgb(var(--v-theme-secondary)); color: white; width: 100%;"
+        ) ここから線を描画
         v-btn.my-2(
           v-if="editMode"
           text
@@ -444,6 +491,63 @@ div(style="height: 100%; width: 100%")
           @click="editMode = false; editModeEndDialog = false"
           prepend-icon="mdi-check"
           ) ええで！
+  //- 選択した線の編集カード
+  .selected-line-card(v-if="selectedLine && editMode")
+    v-card(
+      style="position: fixed; bottom: 0; left: 0; z-index: 1000; width: 100%; border-radius: 16px 16px 0 0;"
+    )
+      v-card-actions
+        p.ml-2(style="display: flex; align-items: center;")
+          v-icon.mr-2 mdi-vector-line
+          span {{ selectedLine.name ? selectedLine.name : '線' }}を編集
+        v-spacer
+        v-btn(
+          text
+          @click="selectedLine = null; selectedLineIndex = -1"
+          icon="mdi-close"
+          )
+      v-card-text
+        .info
+          v-icon mdi-tag
+          v-text-field(
+            v-model="selectedLine.name"
+            label="名前"
+            placeholder="例: ルート1"
+            variant="outlined"
+            style="flex: 1;"
+            clearable
+          )
+        .info.mt-2
+          v-icon mdi-palette
+          v-btn(
+            :style="`background-color: ${selectedLine.color ? selectedLine.color : '#3388ff'}; color: white;`"
+          ) 色を選択
+            v-menu(
+              activator="parent"
+              location="bottom"
+            )
+              v-color-picker(
+                v-model="selectedLine.color"
+                show-swatches
+                hide-canvas
+                hide-inputs
+                hide-mode-switch
+                mode="hexa"
+                @click.stop
+              )
+        v-btn.my-2(
+          text
+          @click="mapData.lines.splice(selectedLineIndex, 1); selectedLine = null; selectedLineIndex = -1"
+          prepend-icon="mdi-delete"
+          style="background-color: rgb(var(--v-theme-error)); width: 100%;"
+        ) 削除
+        v-btn.my-2(
+          text
+          @click="selectedLine = null; selectedLineIndex = -1"
+          prepend-icon="mdi-close"
+          style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
+        ) 閉じる
+        .my-4
   //-- 位置情報利用許可ダイアログ --
   v-dialog(
     v-model="requestGeoPermissionDialog"
@@ -487,7 +591,7 @@ div(style="height: 100%; width: 100%")
   import { Share } from '@capacitor/share'
   import { Toast } from '@capacitor/toast'
 
-  import { LIcon, LMap, LMarker, LTileLayer } from '@vue-leaflet/vue-leaflet'
+  import { LIcon, LMap, LMarker, LPolyline, LTileLayer } from '@vue-leaflet/vue-leaflet'
   import { Icon, Vue3IconPicker } from 'vue3-icon-picker'
   import muniArray from '@/js/muni'
   // @ts-ignore
@@ -502,6 +606,7 @@ div(style="height: 100%; width: 100%")
     components: {
       LMap,
       LMarker,
+      LPolyline,
       LTileLayer,
       LIcon,
       Vue3IconPicker,
@@ -545,6 +650,7 @@ div(style="height: 100%; width: 100%")
           ownerUserId: '',
           name: '',
           points: [],
+          lines: [],
           createdAt: undefined,
           sharedUserIds: [],
           editorUserIds: [],
@@ -553,6 +659,12 @@ div(style="height: 100%; width: 100%")
         savedDialog: false,
         /** ルートパラメータ（URLパラメータ） */
         params: '',
+        /** 描画中の線 */
+        drawingLine: null as { waypoints: [number, number][] } | null,
+        /** 編集中の線 */
+        selectedLine: null as { name: string | undefined, waypoints: [number, number][], color: string | undefined, width: number | undefined } | null,
+        /** 編集中の線のインデックス */
+        selectedLineIndex: -1,
       }
     },
     computed: {
@@ -592,6 +704,9 @@ div(style="height: 100%; width: 100%")
       /** 編集モードがオフになったときに、詳細カードのターゲットをリセットする */
       editMode (newEditMode) {
         this.detailCardTarget = null
+        this.drawingLine = null
+        this.selectedLine = null
+        this.selectedLineIndex = -1
 
         if (!newEditMode && this.params === 'create') {
           this.$router.back()
@@ -663,9 +778,16 @@ div(style="height: 100%; width: 100%")
         } else if (this.optionsDialog) {
           /** オプションダイアログを閉じる */
           this.optionsDialog = false
+        } else if (this.drawingLine) {
+          /** 線描画モードをキャンセルする */
+          this.cancelDrawingLine()
         } else if (this.detailCardTarget) {
           /** 詳細カードを閉じる */
           this.detailCardTarget = null
+        } else if (this.selectedLine) {
+          /** 選択中の線を閉じる */
+          this.selectedLine = null
+          this.selectedLineIndex = -1
         } else if (this.editMode) {
           /** 編集モードを終了するか確認する */
           this.editModeEndDialog = true
@@ -701,6 +823,10 @@ div(style="height: 100%; width: 100%")
         const mapData = this.maps.maps.find(map => map.serverId === this.params)
         if (mapData) {
           this.mapData = mapData
+          /** 後方互換: linesフィールドが存在しない場合は初期化 */
+          if (!this.mapData.lines) {
+            this.mapData.lines = []
+          }
         } else {
           Toast.show({ text: '地図の読み込みに失敗しました。' })
         }
@@ -717,6 +843,13 @@ div(style="height: 100%; width: 100%")
         if (!this.editMode) {
           return
         }
+
+        /** 線描画モード中は経由地点を追加 */
+        if (this.drawingLine) {
+          this.drawingLine.waypoints.push([latlng.lat, latlng.lng])
+          return
+        }
+
         if (this.detailCardTarget) {
           this.detailCardTarget = null
           return
@@ -766,6 +899,70 @@ div(style="height: 100%; width: 100%")
         }
         Toast.show({ text: '保存しました！' })
         this.editMode = false
+      },
+      /** 線描画を開始する */
+      startDrawingLine (point: { latlng: [number, number] }) {
+        this.detailCardTarget = null
+        this.drawingLine = {
+          waypoints: [[point.latlng[0], point.latlng[1]]],
+        }
+      },
+      /** 線描画を完了する */
+      finishDrawingLine () {
+        if (!this.drawingLine || this.drawingLine.waypoints.length < 2) return
+        if (!this.mapData.lines) {
+          this.mapData.lines = []
+        }
+        this.mapData.lines.push({
+          name: `線${new Date().toLocaleTimeString()}`,
+          waypoints: this.drawingLine.waypoints,
+          color: '#3388ff',
+          width: 4,
+        })
+        this.drawingLine = null
+      },
+      /** 線描画をキャンセルする */
+      cancelDrawingLine () {
+        this.drawingLine = null
+      },
+      /**
+       * Catmull-Romスプライン補間で滑らかな曲線の座標列を生成する
+       * @param points 経由地点の配列
+       * @param segments 各区間の補間点数
+       */
+      catmullRomSpline (points: [number, number][], segments = 20): [number, number][] {
+        if (points.length < 2) return points
+        if (points.length === 2) return points
+        /** ここに到達する時点で points.length >= 3 が保証されている */
+        const result: [number, number][] = []
+        /** 端点を複製してスプラインが両端の点を通るようにする */
+        const pts: [number, number][] = [points[0]!, ...points, points.at(-1)!]
+        /** i は 1 〜 pts.length-3 の範囲なので i-1〜i+2 は常に有効なインデックス */
+        for (let i = 1; i < pts.length - 2; i++) {
+          const p0 = pts[i - 1]!
+          const p1 = pts[i]!
+          const p2 = pts[i + 1]!
+          const p3 = pts[i + 2]!
+          for (let t = 0; t <= segments; t++) {
+            const tt = t / segments
+            const tt2 = tt * tt
+            const tt3 = tt2 * tt
+            const lat = 0.5 * (
+              (2 * p1[0])
+              + (-p0[0] + p2[0]) * tt
+              + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * tt2
+              + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * tt3
+            )
+            const lng = 0.5 * (
+              (2 * p1[1])
+              + (-p0[1] + p2[1]) * tt
+              + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * tt2
+              + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * tt3
+            )
+            result.push([lat, lng])
+          }
+        }
+        return result
       },
       /** 位置情報監視のコールバック */
       async watchPosition (position: {
