@@ -39,17 +39,6 @@ v-card(
         )
         v-icon mdi-plus
     .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
-  //-- 左上の友達リストボタン --
-  //- .left-top-buttons
-    .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
-    .current-button
-      v-btn(
-        size="x-large"
-        icon
-        @click="$router.push('/friendlist')"
-        style="background-color: rgb(var(--v-theme-primary)); color: white"
-        )
-        v-icon mdi-account-multiple
   //-- 右上のアカウントボタン --
   .right-top-buttons
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
@@ -65,15 +54,6 @@ v-card(
           style="height: 4em; width: 4em; border-radius: 9999px; border: solid 2px #000;"
           onerror="this.src='/account_default.jpg'"
           )
-    //- QRコードボタン
-    //- .account-button.my-2
-      v-btn(
-        v-ripple
-        @click="$router.push('/qrcode')"
-        icon="mdi-qrcode-scan"
-        color="rgb(var(--v-theme-primary)"
-        size="x-large"
-      )
   //-- 友達検索ダイアログ --
   v-dialog(
     v-model="searchFriendDialog"
@@ -219,7 +199,6 @@ v-card(
   import { Browser } from '@capacitor/browser'
   import { Share } from '@capacitor/share'
 
-  import { Toast } from '@capacitor/toast'
   // @ts-ignore
   import mixins from '@/mixins/mixins'
   import { useMyProfileStore } from '@/stores/myProfile'

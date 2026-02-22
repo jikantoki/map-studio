@@ -44,13 +44,6 @@ div(style="height: 100%; width: 100%")
         p マップ
       .button(
         v-ripple
-        @click="timelineMode = true"
-        style="opacity: 0.8;"
-        )
-        v-icon mdi-chart-timeline-variant
-        p タイムライン
-      .button(
-        v-ripple
         @click="optionsDialog = true"
         style="opacity: 0.8;"
         )
@@ -68,17 +61,17 @@ div(style="height: 100%; width: 100%")
         )
         v-icon mdi-crosshairs-gps
     .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
-  //-- 左上の友達リストボタン --
+  //-- 左上の戻るボタン --
   .left-top-buttons
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
     .current-button
       v-btn(
         size="x-large"
         icon
-        @click="$router.push('/friendlist')"
+        @click="$router.back()"
         style="background-color: rgb(var(--v-theme-primary)); color: white"
         )
-        v-icon mdi-account-multiple
+        v-icon mdi-arrow-left
   //-- 右上のアカウントボタン --
   .right-top-buttons
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
@@ -94,14 +87,6 @@ div(style="height: 100%; width: 100%")
           style="height: 4em; width: 4em; border-radius: 9999px; border: solid 2px #000;"
           onerror="this.src='/account_default.jpg'"
           )
-    .account-button.my-2
-      v-btn(
-        v-ripple
-        @click="$router.push('/qrcode')"
-        icon="mdi-qrcode-scan"
-        color="rgb(var(--v-theme-primary)"
-        size="x-large"
-      )
   //- 地図で押したアカウントの詳細カード
   .detail-card-target
     v-card(
@@ -148,39 +133,6 @@ div(style="height: 100%; width: 100%")
           prepend-icon="mdi-map-marker"
           style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
         ) Google Mapsで開く
-  //-- 友達検索ダイアログ --
-  v-dialog(
-    v-model="searchFriendDialog"
-  )
-    v-card
-      v-card-actions(
-        style="width: 90vw;"
-      )
-        p.ml-2 友達を探す
-        v-spacer
-        v-btn(
-          text
-          @click="searchFriendDialog = false"
-          icon="mdi-close"
-          )
-      v-card-text
-        v-text-field(
-          label="友達のID"
-          prepend-icon="mdi-account"
-          v-model="searchFriendId"
-          @keydown="searchFriendErrorMessage = ''"
-          @keydown.enter="searchFriend(searchFriendId)"
-        )
-        p(
-          style="height: 1em;"
-        ) {{ searchFriendErrorMessage }}
-      v-card-actions
-        v-btn(
-          @click="searchFriend(searchFriendId)"
-          prepend-icon="mdi-magnify"
-          style="background-color: rgb(var(--v-theme-primary));"
-          :loading="searchFriendLoading"
-        ) 検索
   //-- オプションダイアログ --
   v-dialog(
     v-model="optionsDialog"
@@ -237,25 +189,6 @@ div(style="height: 100%; width: 100%")
               style="background-color: rgb(var(--v-theme-primary)); color: white;"
             ) ログイン
         v-list.options-list
-          v-list-item.item( @click="timelineMode = true" )
-            .icon-and-text
-              v-icon mdi-chart-timeline-variant
-              v-list-item-title タイムライン
-          v-list-item.item( @click="searchFriendDialog = true" )
-            .icon-and-text
-              v-icon mdi-magnify
-              v-list-item-title 友達を探す
-          v-list-item.item( @click="$router.push('qrcode')" )
-            .icon-and-text
-              v-icon mdi-qrcode-scan
-              v-list-item-title QRコードで友達を探す
-          v-list-item.item(
-            @click="$router.push('/friendlist')"
-            v-show="myProfile && myProfile.userId"
-          )
-            .icon-and-text
-              v-icon mdi-account-multiple
-              v-list-item-title 友達リスト
           v-list-item.item( @click="$router.push('/settings')" )
             .icon-and-text
               v-icon mdi-cog
@@ -310,22 +243,6 @@ div(style="height: 100%; width: 100%")
           @click="requestGeoPermission"
           prepend-icon="mdi-check"
           ) ええで！
-  v-dialog(
-    v-model="acceptDialog"
-    persistent
-  )
-    v-card
-      v-card-title 友達リクエストが来ています！
-      v-card-text
-        p {{ acceptList.length }}人の友達があなたを待っています。承認してつながろう！
-      v-card-actions
-        v-btn(
-          @click="acceptDialog = false"
-        ) やめとく
-        v-btn(
-          @click="$router.push('/friendlist')"
-          style="background-color: rgb(var(--v-theme-primary)); color: white"
-        ) リクエストを見る
 </template>
 
 <script lang="ts">
@@ -365,28 +282,14 @@ div(style="height: 100%; width: 100%")
         detailCardTarget: null as {} | null,
         /** 詳細カードに現在の住所を表示 */
         detailCardTargetAddress: null as string | null,
-        /** オプションダイアログの表示フラグ */
-        optionsDialog: false,
         /** 自分のプロフィール */
         myProfile: useMyProfileStore(),
-        /** 友達検索ダイアログ */
-        searchFriendDialog: false,
-        /** 検索する友達のID */
-        searchFriendId: '',
-        /** 友達検索中のローディング画面 */
-        searchFriendLoading: false,
-        /** 友達検索画面のエラー表示 */
-        searchFriendErrorMessage: '',
         /** 環境変数 */
         env: null as any,
-        /** 承認待ち友達リスト */
-        acceptList: [] as any,
-        /** 承認してほしい友達がいるダイアログ */
-        acceptDialog: false,
-        /** 友達リスト */
-        friendList: [] as any[],
         /** 設定ストア */
         settings: useSettingsStore(),
+        /** 編集モード */
+        editMode: false,
       }
     },
     computed: {},
@@ -416,12 +319,6 @@ div(style="height: 100%; width: 100%")
     async mounted () {
       // @ts-ignore
       this.env = import.meta.env as any
-
-      /** ようこその復活 */
-      const welcomeDialog = localStorage.getItem('welcomeDialog')
-      if (welcomeDialog && welcomeDialog.toLowerCase() == 'true') {
-        this.optionsDialog = true
-      }
 
       /** ローカルストレージから最後に取得した位置情報を読み込み */
       const localStorageLatlng = localStorage.getItem('latlng')
@@ -474,16 +371,7 @@ div(style="height: 100%; width: 100%")
 
       /** バックボタンのリスナーを追加 */
       App.addListener('backButton', () => {
-        if (this.searchFriendDialog) {
-          // 友達検索ダイアログを閉じる
-          this.searchFriendDialog = false
-        } else if (this.acceptDialog) {
-          // 友達承認しろダイアログを閉じる
-          this.acceptDialog = false
-        } else if (this.optionsDialog) {
-          /** オプションダイアログを閉じる */
-          this.optionsDialog = false
-        } else if (this.requestGeoPermissionDialog) {
+        if (this.requestGeoPermissionDialog) {
           /** 位置情報利用許可ダイアログを閉じる */
           this.requestGeoPermissionDialog = false
         } else if (this.detailCardTarget) {
@@ -491,9 +379,6 @@ div(style="height: 100%; width: 100%")
           this.detailCardTarget = null
         } else if (this.requestGeoPermissionDialog) {
           // ここはあえて何もしない
-        } else if (this.$route.path === '/') {
-          /** ルートページならアプリを最小化 */
-          App.minimizeApp()
         } else {
           /** ルート以外のページなら1つ戻る */
           this.$router.back()
@@ -510,29 +395,9 @@ div(style="height: 100%; width: 100%")
       )
 
       /** 現在地を取得し、地図の中心も移動 */
-      await this.setCurrentPosition()
-
-      // 承認していない友達リクエストがあったらポップアップを表示
-      const res: any = await this.sendAjaxWithAuth('/getMyFriendList.php', {
-        id: this.myProfile.userId,
-        token: this.myProfile.userToken,
-        withLocation: true,
-      })
-      if (res && res.body) {
-        const allFriendList: any[] = res.body.friendList
-        this.acceptList = []
-        if (allFriendList && allFriendList[0]) {
-          for (const friend of allFriendList) {
-            friend.friendProfile.userId = friend.friendRealId
-            if (friend.status == 'request' && friend.fromUserId != res.body.mySecretId) {
-              this.acceptList.push(friend.friendProfile)
-            }
-          }
-        }
-      }
-      if (this.acceptList.length > 0 && history.length <= 2) {
-        this.acceptDialog = true
-      }
+      setTimeout(async () => {
+        await this.setCurrentPosition()
+      }, 1000)
     },
     unmounted () {
       App.removeAllListeners()
@@ -558,7 +423,7 @@ div(style="height: 100%; width: 100%")
         /** 仮で最後に取得した位置情報を地図の中心に設定 */
         this.leaflet.center = this.myLocation
         /** バグるので0.5秒待つ */
-        await setTimeout(() => {}, 500)
+        await new Promise(resolve => setTimeout(resolve, 500))
         this.leaflet.zoom = 15
       },
       /** 位置情報の許可を求める */
@@ -597,29 +462,6 @@ div(style="height: 100%; width: 100%")
       /** URLをブラウザで開く */
       async openURL (url: string) {
         await Browser.open({ url: url })
-      },
-      /** 友達を検索 */
-      async searchFriend (searchId: string) {
-        searchId = searchId.replace('@', '')
-        this.searchFriendLoading = true
-        if (!searchId) {
-          this.searchFriendErrorMessage = '検索するIDを入力してください'
-          this.searchFriendLoading = false
-          return
-        }
-        const userData = await this.getProfile(
-          searchId,
-          this.myProfile.userId,
-          this.myProfile.userToken,
-        )
-        if (userData) {
-          this.$router.push(`/user/${userData.userId}`)
-        } else {
-          this.searchFriendErrorMessage = '友達が見つかりませんでした'
-          this.searchFriendLoading = false
-          return
-        }
-        this.searchFriendLoading = false
       },
       /**
        * 2つのDateオブジェクトの差が10秒以内か判定する
