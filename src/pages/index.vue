@@ -315,7 +315,7 @@ div(style="height: 100%; width: 100%")
             .icon-and-text
               v-icon mdi-information
               v-list-item-title このアプリについて
-          v-list-item.item( @click="share('https://play.google.com/store/apps/details?id=xyz.enoki.nomadpulse', 'Nomad Pulse')" )
+          v-list-item.item( @click="share('https://play.google.com/store/apps/details?id=xyz.enoki.mapstudio', 'Map studio')" )
             .icon-and-text
               v-icon mdi-share-variant
               v-list-item-title このアプリを共有する
@@ -369,7 +369,7 @@ div(style="height: 100%; width: 100%")
         p このアプリはバックグラウンドでも動き続けます。端末側の設定画面より、以下の操作を実行してください。
         ol.ma-6
           li 「ええで！」を押して「バッテリー使用量設定」を開く
-          li リストから「Nomad Pulse」を選択する
+          li リストから「Map studio」を選択する
           li 「バックグラウンドでの使用を許可」を開き、「制限なし」を選択
           li その後、「戻る」操作でこのアプリまで戻ってきてください！
         br
@@ -935,7 +935,7 @@ div(style="height: 100%; width: 100%")
             /** 取得した情報をサーバーに送信 */
             try {
               await CapacitorHttp.post({
-                url: 'https://api.nomadpulse.enoki.xyz/updateGeoLocation.php',
+                url: 'https://api.mapstudio.enoki.xyz/updateGeoLocation.php',
                 headers: {
                   'Content-Type': 'application/json',
                   'id': this.myProfile.userId,

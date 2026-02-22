@@ -1,25 +1,27 @@
-# Nomad Pulse
+# Map Studio
 
-位置情報を記録・共有するAndroidアプリ
+地図に架空の路線図、ピンなどを付けて落書きできるアプリ
 
 <img src="./public/icon.png" width="256px" alt="アイコン">
 
-[最新版APKダウンロード](https://raw.githubusercontent.com/jikantoki/Nomad-Pulse/refs/heads/main/nomad-pulse.apk)
+[最新版APKダウンロード](https://raw.githubusercontent.com/jikantoki/map-studio/refs/heads/main/app-release.apk)
 
 ---
 
 ## このプロジェクトについて
 
-Nomad Pulse は、GPS位置情報をバックグラウンドで継続的に記録し、フレンドと現在地を共有できるAndroidアプリです。  
+Map Studioは地図に駅や路線図、ピンを刺して遊べるAndroidアプリです。  
+サーバーを作り、公開/非公開を選んでそこに色々作れます！  
+（非公開の場合は、サーバー管理者が閲覧権限・編集権限を他アカウントに与えることが可能）
 Vue 3 + Capacitor で構築されたハイブリッドアプリで、PHPバックエンドとMySQL DBを組み合わせて動作します。
 
 ### 主な機能
 
-- バックグラウンドでの継続的な位置情報取得（フォアグラウンドサービス）
-- フレンドリスト・フレンド申請
-- フレンドとのリアルタイム位置情報共有（地図表示）
-- QRコードによるユーザー検索・フレンド追加
-- プッシュ通知
+- 地図に落書き
+- 架空の路線図や道路を敷設
+- アイコンを設定してピンを止めて、クリックしたらメモが出現
+- フレンドリスト
+- QRコードによるユーザー検索・フレンド追加・サーバー検索
 - メールアドレス認証付きアカウント登録・ログイン
 - プロフィール設定
 
@@ -41,8 +43,8 @@ Vue 3 + Capacitor で構築されたハイブリッドアプリで、PHPバッ�
 
 ## ファイル構成
 
-```
-Nomad-Pulse/
+```txt
+Map-Studio/
 ├── src/                        # Vue フロントエンドソース
 │   ├── pages/                  # ページコンポーネント（ファイルベースルーティング）
 │   │   ├── index.vue           # ホーム（地図表示）
@@ -63,7 +65,7 @@ Nomad-Pulse/
 │   ├── styles/                 # SCSS スタイル
 │   └── plugins/                # Vuetify等プラグイン設定
 ├── android/                    # Capacitor Androidネイティブコード
-│   └── app/src/main/java/xyz/enoki/nomadpulse/
+│   └── app/src/main/java/xyz/enoki/mapstudio/
 │       ├── MainActivity.java               # アプリエントリポイント
 │       ├── LocationForegroundService.java  # バックグラウンド位置情報サービス
 │       ├── ServiceRestartReceiver.java     # サービス再起動ブロードキャストレシーバー

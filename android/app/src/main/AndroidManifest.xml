@@ -28,7 +28,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="nomadpulse.enoki.xyz" />
+                    android:host="mapstudio.enoki.xyz" />
                 <data
                     android:scheme="https"
                     android:host="np.enoki.xyz"
@@ -40,8 +40,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="nomadpulse" />
-                <!-- nomadpulse://enoki.xyz/user/hoge でアプリを起動させる -->
+                <data android:scheme="mapstudio" />
+                <!-- mapstudio://enoki.xyz/user/hoge でアプリを起動させる -->
             </intent-filter>
         </activity>
 
@@ -67,7 +67,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="xyz.enoki.nomadpulse.ACTION_RESTART_SERVICE" />
+                <action android:name="xyz.enoki.mapstudio.ACTION_RESTART_SERVICE" />
             </intent-filter>
         </receiver>
 

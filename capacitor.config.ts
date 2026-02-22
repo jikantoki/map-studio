@@ -1,17 +1,17 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'xyz.enoki.nomadpulse',
-  appName: 'NomadPulse',
+  appId: 'xyz.enoki.mapstudio',
+  appName: 'Mapstudio',
   webDir: 'dist',
   plugins: {
     StatusBar: {
       overlaysWebView: false,
     },
     BackgroundRunner: {
-      label: 'xyz.enoki.nomadpulse.background',
+      label: 'xyz.enoki.mapstudio.background',
       src: 'runners/background-runner.js',
-      event: 'NomadPulseBackgroundRunner',
+      event: 'MapstudioBackgroundRunner',
       repeat: true,
       /** OSの制約で15分間隔 */
       interval: 15,
@@ -25,12 +25,12 @@ const config: CapacitorConfig = {
     },
   },
   server: {
-    hostname: 'nomadpulse.enoki.xyz',
+    hostname: 'mapstudio.enoki.xyz',
     androidScheme: 'https',
   },
   deepLinks: {
     enabled: true,
-    prefixes: ['nomadpulse://', 'https://nomadpulse.enoki.xyz'],
+    prefixes: ['mapstudio://', 'https://mapstudio.enoki.xyz'],
   },
   android: {
     useLegacyBridge: true,

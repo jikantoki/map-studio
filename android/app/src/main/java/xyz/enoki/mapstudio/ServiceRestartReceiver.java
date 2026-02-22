@@ -1,4 +1,4 @@
-package xyz.enoki.nomadpulse;
+package xyz.enoki.mapstudio;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.os.Build;
 
 public class ServiceRestartReceiver extends BroadcastReceiver {
-    private static final String ACTION_RESTART_SERVICE = "xyz.enoki.nomadpulse.ACTION_RESTART_SERVICE";
+    private static final String ACTION_RESTART_SERVICE = "xyz.enoki.mapstudio.ACTION_RESTART_SERVICE";
 
     @Override
     public void onReceive(Context context, Intent intent) {

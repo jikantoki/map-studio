@@ -1,4 +1,4 @@
-package xyz.enoki.nomadpulse;
+package xyz.enoki.mapstudio;
 
 import android.app.AlarmManager;
 import android.app.Notification;
@@ -35,7 +35,7 @@ public class LocationForegroundService extends Service {
         );
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("NomadPulse")
+            .setContentTitle("Mapstudio")
             .setContentText("バックグラウンドで位置情報を取得しています")
             .setSmallIcon(R.drawable.ic_location_status)
             .setContentIntent(pendingIntent)
@@ -56,7 +56,7 @@ public class LocationForegroundService extends Service {
 
         // Schedule restart when service is destroyed
         Intent restartServiceIntent = new Intent(getApplicationContext(), ServiceRestartReceiver.class);
-        restartServiceIntent.setAction("xyz.enoki.nomadpulse.ACTION_RESTART_SERVICE");
+        restartServiceIntent.setAction("xyz.enoki.mapstudio.ACTION_RESTART_SERVICE");
         restartServiceIntent.setPackage(getPackageName());
         sendBroadcast(restartServiceIntent);
     }
@@ -72,7 +72,7 @@ public class LocationForegroundService extends Service {
 
         // Use AlarmManager for more reliable restart
         Intent restartServiceIntent = new Intent(getApplicationContext(), ServiceRestartReceiver.class);
-        restartServiceIntent.setAction("xyz.enoki.nomadpulse.ACTION_RESTART_SERVICE");
+        restartServiceIntent.setAction("xyz.enoki.mapstudio.ACTION_RESTART_SERVICE");
         restartServiceIntent.setPackage(getPackageName());
 
         PendingIntent restartPendingIntent = PendingIntent.getBroadcast(

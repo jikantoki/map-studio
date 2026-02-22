@@ -26,22 +26,22 @@ v-card(
         v-btn.mr-2(
           text
           append-icon="mdi-github"
-          @click="openURL('https://github.com/jikantoki/Nomad-Pulse')"
+          @click="openURL('https://github.com/jikantoki/Map-Studio')"
         ) Github
         v-btn.ml-2(
           text
           append-icon="mdi-web"
-          @click="openURL('https://nomadpulse.enoki.xyz')"
+          @click="openURL('https://mapstudio.enoki.xyz')"
         ) ホームページ
     .settings-list
       .setting-item(
         v-ripple
-        @click="openURL('https://nomadpulse.enoki.xyz')"
+        @click="openURL('https://mapstudio.enoki.xyz')"
         )
         .icon
           v-icon mdi-application-outline
         .text
-          p.title Nomad Pulse
+          p.title Map studio
           p.description &copy; 2025 エノキ電気
       .setting-item(
         v-ripple

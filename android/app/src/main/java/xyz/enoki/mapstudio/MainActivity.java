@@ -1,4 +1,4 @@
-package xyz.enoki.nomadpulse;
+package xyz.enoki.mapstudio;
 
 import android.app.ActivityManager;
 import android.content.Context;

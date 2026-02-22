@@ -9,11 +9,11 @@ use PHPMailer\PHPMailer\Exception;
 // 本当はここenvから取得したい
 define('MailHeader', "
 <div style=\"text-align: center;\">
-<img src=\"https://nomadpulse.enoki.xyz/wp-content/uploads/2026/01/icon.png\" alt=\"Nomad Pulse\" height=\"64px\">
+<img src=\"https://mapstudio.enoki.xyz/wp-content/uploads/2026/01/icon.png\" alt=\"Map studio\" height=\"64px\">
 </div>
 <br>
 <p>
-いつも Nomad Pulse をご利用いただきありがとうございます。
+いつも Map studio をご利用いただきありがとうございます。
 </p>
 <hr>");
 define('MailFooter', "
@@ -21,7 +21,7 @@ define('MailFooter', "
 <p>このメールに返信することはできません。</p>
 <p>また、このメールに身に覚えのない場合は、エノキ電気までお問い合わせください。</p>
 <p>
-<a href=\"https://nomadpulse.enoki.xyz\">Nomad Pulse</a> by <a href=\"https://enoki.xyz\">エノキ電気</a>
+<a href=\"https://mapstudio.enoki.xyz\">Map studio</a> by <a href=\"https://enoki.xyz\">エノキ電気</a>
 </p>
 <p>お問い合わせはこちら: <a href=\"mailto:info@enoki.xyz\">info@enoki.xyz</a></p>
 <p>&copy; 2024 エノキ電気</p>

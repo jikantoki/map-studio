@@ -1,6 +1,6 @@
 {
-  "short_name": "Nomad Pulse",
-  "name": "Nomad Pulse",
+  "short_name": "Map studio",
+  "name": "Map studio",
   "display": "standalone",
   "display_override": [
     "standalone"

@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "xyz.enoki.nomadpulse",
+  "applicationId": "xyz.enoki.mapstudio",
   "variantName": "release",
   "elements": [
     {

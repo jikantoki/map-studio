@@ -54,7 +54,7 @@ if (!$response) {
     <br>
     <h3>ユーザー名: {$username}</h3>
     <br>
-    <p>引き続き Nomad Pulse をよろしくお願いいたします。</p>"
+    <p>引き続き Map studio をよろしくお願いいたします。</p>"
   );
   //アカウント作れた
   echo json_encode([

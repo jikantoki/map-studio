@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">NomadPulse</string>
-    <string name="title_activity_main">NomadPulse</string>
-    <string name="package_name">xyz.enoki.nomadpulse</string>
-    <string name="custom_url_scheme">xyz.enoki.nomadpulse</string>
+    <string name="app_name">Mapstudio</string>
+    <string name="title_activity_main">Mapstudio</string>
+    <string name="package_name">xyz.enoki.mapstudio</string>
+    <string name="custom_url_scheme">xyz.enoki.mapstudio</string>
     <string name="capacitor_background_geolocation_notification_channel_name">バックグラウンド追跡</string>
     <string name="capacitor_background_geolocation_notification_icon">drawable/ic_location_status</string>
 </resources>
