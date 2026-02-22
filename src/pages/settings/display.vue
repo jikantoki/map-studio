@@ -58,7 +58,6 @@ v-card(
 
 <script lang="ts">
   import { Capacitor } from '@capacitor/core'
-  import { Device } from '@capacitor/device'
   import { StatusBar, Style } from '@capacitor/status-bar'
   import { useSettingsStore } from '@/stores/settings'
 

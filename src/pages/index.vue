@@ -34,28 +34,6 @@ div(style="height: 100%; width: 100%")
               )
             p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
               span(v-if="myProfile") {{ myProfile.name ?? myProfile.userId }}
-      LMarker(
-        v-for="(friend, cnt) of friendList"
-        :lat-lng="[friend.location.lat, friend.location.lng]"
-        @click="detailCardTarget = friend.friendProfile"
-        )
-        LIcon(
-          :icon-size="[0,0]"
-          style="border: none;"
-          :icon-anchor="[16, 16]"
-          )
-          div(
-            style="display: flex; align-items: center; width: auto;"
-            :class="(diffSeconds(friend.friendProfile.lastGetLocationTime)) > 60 * 60 ? 'opacity05' : ''"
-            )
-            img(
-              loading="lazy"
-              :src="friend.friendProfile.icon && friend.friendProfile.icon.length ? friend.friendProfile.icon : '/account_default.jpg'"
-              style="height: 32px; width: 32px; border-radius: 9999px; border: solid 1px #000;"
-              onerror="this.src='/account_default.jpg'"
-              )
-            p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
-              span {{ friend.friendProfile.name && friend.friendProfile.name.length && friend.friendProfile.name != 'null' ? friend.friendProfile.name : friend.friendProfile.userId }}
   //-- 下部のアクションバー --
   .action-bar
     .buttons
@@ -151,26 +129,6 @@ div(style="height: 100%; width: 100%")
         .info
           v-icon mdi-card-account-details-outline
           p @{{ detailCardTarget.userId }}
-        .info
-          v-icon(
-            v-if="detailCardTarget && detailCardTarget.battery"
-            ) {{ chooseBatteryIcon(detailCardTarget.battery.parsent, detailCardTarget.battery.chargingNow) }}
-          v-icon(
-            v-else
-          ) mdi-battery
-          p {{ detailCardTarget.battery && detailCardTarget.battery.parsent ? detailCardTarget.battery.parsent.toFixed(0) + '%' : '取得できませんでした' }}
-        .info
-          v-icon mdi-map-marker-account
-          p {{ detailCardTargetAddress ?? '住所取得中...' }}
-        .info
-          v-icon mdi-clock-outline
-          p {{ diffLastGetTime(detailCardTarget.lastGetLocationTime) }}
-        .info.pa-4(
-          style="background-color: rgba(255, 255, 0, 0.3); border-radius: 16px;"
-          v-show="diffSeconds(detailCardTarget.lastGetLocationTime) > 60 * 60"
-        )
-          v-icon mdi-information-outline
-          p この友達は圏外、電源オフ、または位置情報の共有を停止している可能性があります。
         v-btn.my-2(
           text
           v-if="!detailCardTarget.guest"
@@ -329,11 +287,7 @@ div(style="height: 100%; width: 100%")
       v-card-title(class="headline") 位置情報利用のお願い
       v-card-text
         .text-content
-          p このアプリは現在地の表示、及びお互いに承認した友達と共有するために位置情報を利用します。
-          .my-2
-          p アプリを閉じている間や使用していない間も、正確な移動履歴を記録するためにバックグラウンドで位置情報を取得します。
-          .my-2
-          p また、バックグラウンドでもアプリを動かすために、通知の許可も必要です。
+          p このアプリは現在地を表示するために位置情報を利用します。
           .my-2
           p 続行するには、以下の「ええで！」を押してください。
         .privacy-policy-link.mt-4
@@ -357,70 +311,6 @@ div(style="height: 100%; width: 100%")
           @click="requestGeoPermission"
           prepend-icon="mdi-check"
           ) ええで！
-  //-- バックグラウンド許可ダイアログ
-  v-dialog(
-    v-model="requestBackgroundDialog"
-    persistent
-    max-width="600"
-  )
-    v-card
-      v-card-title(class="headline") バックグラウンドでの通知の許可
-      v-card-text
-        p このアプリはバックグラウンドでも動き続けます。端末側の設定画面より、以下の操作を実行してください。
-        ol.ma-6
-          li 「ええで！」を押して「バッテリー使用量設定」を開く
-          li リストから「Map studio」を選択する
-          li 「バックグラウンドでの使用を許可」を開き、「制限なし」を選択
-          li その後、「戻る」操作でこのアプリまで戻ってきてください！
-        br
-        p ちなみに、タスクキルをすると位置情報が更新できなくなるため、タスクキルはしないようにお願いします。
-      v-card-actions
-        v-spacer
-        v-btn(
-          text
-          @click="requestBackgroundDialog = false"
-          prepend-icon="mdi-close"
-          ) 嫌だ！
-        v-btn(
-          style="background-color: rgb(var(--v-theme-primary)); color: white"
-          text
-          @click="requestBackground"
-          prepend-icon="mdi-check"
-          ) ええで！
-  //-- タイムラインモード --
-  v-dialog(
-    v-model="timelineMode"
-    fullscreen
-    transition="dialog-bottom-transition"
-  )
-    v-card(
-      style="width: 100%; height: 100%;"
-    )
-      .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
-      v-card-actions
-        p.ml-2(class="headline" style="font-size: 1.3em") タイムライン
-        v-spacer
-        v-btn(
-          text
-          @click="timelineMode = false"
-          icon="mdi-close"
-          )
-      v-card-text(style="height: inherit; overflow-y: auto;")
-        p ここにタイムラインコンテンツを表示します。
-        .timeline(
-          v-for="(timeline, index) of sortedTimeline"
-          :key="index"
-        )
-          .timeline-entry
-            .timeline-entry-header
-            .timeline-entry-body
-              p(
-                v-if="timeline.address"
-              ) 住所: {{ timeline.address }}
-              p(
-                v-else
-              ) 位置: 緯度 {{ timeline.lat.toFixed(5) }}, 経度 {{ timeline.lng.toFixed(5) }}
-              p 時間: {{ new Date(timeline.startTimestamp).toLocaleString() }}～{{ new Date(timeline.endTimestamp).toLocaleString() }}
   v-dialog(
     v-model="acceptDialog"
     persistent
@@ -440,18 +330,11 @@ div(style="height: 100%; width: 100%")
 </template>
 
 <script lang="ts">
-  import type { BackgroundGeolocationPlugin } from '@capacitor-community/background-geolocation'
   import { App } from '@capacitor/app'
-  import { BackgroundRunner } from '@capacitor/background-runner'
   import { Browser } from '@capacitor/browser'
-  import { Capacitor, CapacitorHttp, registerPlugin } from '@capacitor/core'
-  import { Device } from '@capacitor/device'
-  import { Directory, Encoding, Filesystem, type ReadFileResult } from '@capacitor/filesystem'
-  import { Geolocation, type Position } from '@capacitor/geolocation'
+  import { Geolocation } from '@capacitor/geolocation'
   import { Share } from '@capacitor/share'
-  import { Toast } from '@capacitor/toast'
   import { LIcon, LMap, LMarker, LTileLayer } from '@vue-leaflet/vue-leaflet'
-  import { AndroidSettings, IOSSettings, NativeSettings } from 'capacitor-native-settings'
   import MarkerCluster from '@/components/MarkerCluster.vue'
 
   import muniArray from '@/js/muni'
@@ -460,13 +343,6 @@ div(style="height: 100%; width: 100%")
   import { useMyProfileStore } from '@/stores/myProfile'
   import { useSettingsStore } from '@/stores/settings'
   import 'leaflet/dist/leaflet.css'
-  const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation')
-
-  interface TimelineEntry {
-    lat: number
-    lng: number
-    timestamp: string
-  }
 
   export default {
     components: {
@@ -488,28 +364,14 @@ div(style="height: 100%; width: 100%")
         requestGeoPermissionDialog: false,
         /** 自分の現在地 */
         myLocation: [0, 0],
-        /** 最後に取得した位置情報 */
-        lastGetLocation: [0, 0],
-        /** 自分のバッテリー残量 */
-        myBatteryPersent: 0 as number | undefined,
-        /** 充電中かどうか */
-        chargeingNow: false as boolean | undefined,
         /** 詳細カードのターゲット */
         detailCardTarget: null as {} | null,
         /** 詳細カードに現在の住所を表示 */
         detailCardTargetAddress: null as string | null,
         /** オプションダイアログの表示フラグ */
         optionsDialog: false,
-        /** タイムラインモードかどうか */
-        timelineMode: false,
         /** 自分のプロフィール */
         myProfile: useMyProfileStore(),
-        /** 自分の位置情報を最後にいつ取得したか？ */
-        lastGetMyLocationTime: null as Date | null,
-        /** 最後にサーバーに位置情報を送信した時間 */
-        lastUpdateMyLocationTime: new Date(0),
-        /** バックグラウンド許可が欲しいダイアログフラグ */
-        requestBackgroundDialog: false,
         /** 友達検索ダイアログ */
         searchFriendDialog: false,
         /** 検索する友達のID */
@@ -524,38 +386,13 @@ div(style="height: 100%; width: 100%")
         acceptList: [] as any,
         /** 承認してほしい友達がいるダイアログ */
         acceptDialog: false,
-        /** setIntervalしたものをクリアする用 */
-        updateLocationInterval: null as any,
         /** 友達リスト */
         friendList: [] as any[],
         /** 設定ストア */
         settings: useSettingsStore(),
-        /** タイムラインデータ */
-        timelineData: [] as {
-          lat: number
-          lng: number
-          /** Date.toLocaleString() */
-          startTimestamp: string
-          /** Date.toLocaleString() */
-          endTimestamp: string
-          address: string | null
-        }[],
-        lastUpdatedTimeline: {
-          lat: 0,
-          lng: 0,
-          timestamp: new Date(0).toLocaleDateString(),
-        } as TimelineEntry,
       }
     },
-    computed: {
-      /** 新しい順タイムライン */
-      sortedTimeline () {
-        // eslint-disable-next-line vue/no-side-effects-in-computed-properties, unicorn/no-array-sort
-        return this.timelineData.sort((a, b) => {
-          return new Date(b.endTimestamp).getTime() - new Date(a.endTimestamp).getTime()
-        })
-      },
-    },
+    computed: {},
     watch: {
       /** プロフィール詳細を押された時に、現在の住所を表示する */
       detailCardTarget: {
@@ -578,29 +415,6 @@ div(style="height: 100%; width: 100%")
           localStorage.setItem('welcomeDialog', String(dialog))
         },
       },
-      timelineMode: {
-        handler: async function (mode: boolean) {
-          if (!mode) {
-            return
-          }
-          // タイムラインを開いたタイミングで、住所を取得する
-          let cnt = 0
-          for (const entry of this.timelineData) {
-            if (entry.address) {
-              cnt++
-              continue
-            }
-            this.timelineData[cnt]!.address = await this.getAddress(entry.lat, entry.lng)
-            cnt++
-          }
-          await Filesystem.writeFile({
-            path: 'timeline.json',
-            directory: Directory.Data,
-            encoding: Encoding.UTF8,
-            data: JSON.stringify(this.timelineData),
-          })
-        },
-      },
     },
     async mounted () {
       // @ts-ignore
@@ -616,7 +430,6 @@ div(style="height: 100%; width: 100%")
       const localStorageLatlng = localStorage.getItem('latlng')
       if (localStorageLatlng) {
         this.myLocation = JSON.parse(localStorageLatlng)
-        this.lastGetLocation = JSON.parse(localStorageLatlng)
         /** バグるので0.1秒待ってから地図の中心を設定 */
         setTimeout(() => {
           this.leaflet.center = this.myLocation
@@ -647,51 +460,24 @@ div(style="height: 100%; width: 100%")
         this.myProfile.reset()
       }
 
-      const locationList = localStorage.getItem('locationList')
-      if (locationList) {
-        this.friendList = JSON.parse(locationList)
-        let cnt = 0
-        for (const friend of this.friendList) {
-          this.friendList[cnt].friendProfile.lastGetLocationTime = new Date(friend.location.unixtime * 1000)
-          cnt++
-        }
-      }
-
       /** 位置情報の許可を確認 */
-      if (Capacitor.getPlatform() === 'web') {
-        /** 位置情報の許可を確認 */
-        Geolocation.checkPermissions().then(result => {
-          if (result.location === 'granted') {
-            this.setCurrentPosition()
-          } else {
-            Geolocation.requestPermissions().then(result => {
-              if (result.location === 'granted') {
-                this.setCurrentPosition()
-              }
-            }).catch(() => {
-              if (Capacitor.getPlatform() === 'web') {
-                this.requestGeoPermissionDialog = true
-              }
-            })
-          }
-        })
-      } else {
-        /** スマホの場合、この方法で位置情報と通知を許可してもらう */
-        const perm = await Geolocation.checkPermissions()
-        if (perm.coarseLocation != 'granted' && perm.location != 'granted') {
-          const permission = await BackgroundRunner.checkPermissions()
-          if (permission.geolocation !== 'granted') {
+      Geolocation.checkPermissions().then(result => {
+        if (result.location === 'granted') {
+          this.setCurrentPosition()
+        } else {
+          Geolocation.requestPermissions().then(result => {
+            if (result.location === 'granted') {
+              this.setCurrentPosition()
+            }
+          }).catch(() => {
             this.requestGeoPermissionDialog = true
-          }
+          })
         }
-      }
+      })
 
       /** バックボタンのリスナーを追加 */
       App.addListener('backButton', () => {
-        if (this.timelineMode) {
-          /** タイムラインモードを閉じる */
-          this.timelineMode = false
-        } else if (this.searchFriendDialog) {
+        if (this.searchFriendDialog) {
           // 友達検索ダイアログを閉じる
           this.searchFriendDialog = false
         } else if (this.acceptDialog) {
@@ -706,145 +492,28 @@ div(style="height: 100%; width: 100%")
         } else if (this.detailCardTarget) {
           /** 詳細カードを閉じる */
           this.detailCardTarget = null
-        } else if (this.requestBackgroundDialog) {
-          // ここはあえて何もしない
         } else if (this.requestGeoPermissionDialog) {
           // ここはあえて何もしない
         } else if (this.$route.path === '/') {
           /** ルートページならアプリを最小化 */
           App.minimizeApp()
-          Toast.show({ text: 'アプリはバックグラウンドで実行されます' })
         } else {
           /** ルート以外のページなら1つ戻る */
           this.$router.back()
         }
       })
 
-      // ローカルにタイムラインデータを保存
-      /** タイムラインデータ */
-      let file: ReadFileResult
-      try {
-        file = await Filesystem.readFile({
-          path: 'timeline.json',
-          directory: Directory.Data,
-          encoding: Encoding.UTF8,
-        })
-      } catch {
-        await Filesystem.writeFile({
-          path: 'timeline.json',
-          directory: Directory.Data,
-          encoding: Encoding.UTF8,
-          data: JSON.stringify([]),
-        })
+      /** 現在地を監視 */
+      Geolocation.watchPosition({
+        enableHighAccuracy: true,
+        timeout: 20_000,
+        interval: 20_000,
+      }, position =>
+        this.watchPosition(position),
+      )
 
-        file = await Filesystem.readFile({
-          path: 'timeline.json',
-          directory: Directory.Data,
-          encoding: Encoding.UTF8,
-        })
-      }
-
-      // @ts-ignore
-      this.timelineData = JSON.parse(file.data)
-
-      // Webの場合は従来のAPIで位置情報追跡
-      if (Capacitor.getPlatform() === 'web') {
-        /** 現在地を監視 */
-        Geolocation.watchPosition({
-          enableHighAccuracy: true,
-          timeout: 20_000,
-          interval: 20_000,
-        }, position =>
-          this.watchPosition(position),
-        )
-      }
-
-      // ネイティブアプリでは位置情報のバックグラウンド追跡
-      if (Capacitor.getPlatform() !== 'web') {
-        BackgroundGeolocation.addWatcher({
-          backgroundMessage: 'バックグラウンドで位置情報を取得しています。タスクキルしないでください。',
-          backgroundTitle: '位置情報取得中',
-          distanceFilter: 5,
-          requestPermissions: false,
-        }, (location, error) => {
-          // あいまいな位置情報でも誤検知するので一旦消している
-          // if (error) {
-          //   if (error.code === 'NOT_AUTHORIZED') {
-          //     this.requestBackgroundDialog = true
-          //   }
-          //   return console.error(error)
-          // }
-
-          const position = {
-            coords: {
-              latitude: location?.latitude,
-              longitude: location?.longitude,
-            },
-          }
-          if (position.coords.latitude
-            && position.coords.longitude) {
-            this.lastGetLocation = [
-              position.coords.latitude,
-              position.coords.longitude,
-            ]
-          }
-          // this.watchPosition(position)
-          return location
-        }).then(watcherId => {
-          localStorage.setItem('watcherId', watcherId)
-        })
-      }
-
-      // 5秒に一回、位置情報に関わらずサーバーにリクエストを送る
-      setInterval(() => {
-        if (this.lastGetLocation[0] && this.lastGetLocation[1]) {
-          this.watchPosition({
-            coords: {
-              latitude: this.lastGetLocation[0],
-              longitude: this.lastGetLocation[1],
-            },
-          })
-        }
-      }, 1000 * 5)
-
-      // Getパラメータから友達IDがあればその人の位置情報場所に飛ぶ
-      const urlParams = new URLSearchParams(window.location.search)
-      const friendId = urlParams.get('viewUser')
-      if (friendId) {
-        const friend = this.friendList.find(f => f.friendProfile.userId === friendId)
-        if (friend) {
-          this.leaflet.center = [
-            friend.location.lat,
-            friend.location.lng,
-          ]
-        }
-        this.optionsDialog = false
-      } else {
-        /** 現在地を取得し、地図の中心も移動 */
-        await this.setCurrentPosition()
-      }
-
-      /** 遅延も考慮して0.5秒後に再度中心移動 */
-      setTimeout(() => {
-        // Getパラメータから友達IDがあればその人の位置情報場所に飛ぶ
-        const urlParams = new URLSearchParams(window.location.search)
-        const friendId = urlParams.get('viewUser')
-        if (friendId) {
-          const friend = this.friendList.find(f => f.friendProfile.userId === friendId)
-          if (friend) {
-            this.leaflet.center = [
-              friend.location.lat,
-              friend.location.lng,
-            ]
-          }
-          urlParams.delete('viewUser')
-          history.replaceState(null, '', window.location.pathname + '?' + urlParams.toString())
-          history.pushState(null, '', window.location.pathname + '?' + urlParams.toString())
-        } else {
-          /** 現在地を取得し、地図の中心も移動 */
-          this.setCurrentPosition()
-        }
-      }, 500)
+      /** 現在地を取得し、地図の中心も移動 */
+      await this.setCurrentPosition()
 
       // 承認していない友達リクエストがあったらポップアップを表示
       const res: any = await this.sendAjaxWithAuth('/getMyFriendList.php', {
@@ -867,17 +536,9 @@ div(style="height: 100%; width: 100%")
       if (this.acceptList.length > 0 && history.length <= 2) {
         this.acceptDialog = true
       }
-
-      /** 友達の現在地を更新 */
-      this.updateLocation()
-      /** 10秒に1回、サーバーと通信して位置情報を更新 */
-      this.updateLocationInterval = setInterval(
-        async () => this.updateLocation(),
-        10_000)
     },
     unmounted () {
       App.removeAllListeners()
-      clearInterval(this.updateLocationInterval)
     },
     methods: {
       /** 位置情報監視のコールバック */
@@ -886,141 +547,11 @@ div(style="height: 100%; width: 100%")
           [key: string]: any
         }
       } | null) {
-        if (this.diffSeconds(this.lastUpdateMyLocationTime) < 5) {
-          // 5秒以内に更新があったら処理をキャンセル
-          return false
-        }
         // console.log('最終更新:', new Date(this.lastUpdateMyLocationTime))
         if (position) {
           const lat: number = position.coords.latitude
           const lng: number = position.coords.longitude
-          this.lastGetLocation = [lat, lng]
           this.myLocation = [lat, lng]
-          const lastGetMyLocationTime = new Date()
-          localStorage.setItem('latlng', JSON.stringify(this.myLocation))
-          this.myProfile.lastGetLocationTime = lastGetMyLocationTime
-          this.myProfile.location = [lat, lng]
-
-          const now = new Date()
-          // if (this.isWithin10Seconds(this.lastUpdateMyLocationTime, now)) {
-          //   console.log('10秒以内の位置情報更新はサーバーに送信しません')
-          //   return
-          // }
-          this.lastUpdateMyLocationTime = now
-
-          /** バッテリー情報を取得 */
-          const info = await Device.getBatteryInfo()
-          let batteryLevel = null
-          let batteryCharging = null
-          if (info.batteryLevel) {
-            batteryLevel = info.batteryLevel * 100
-            batteryCharging = info.isCharging
-            this.myBatteryPersent = batteryLevel
-            if (this.myProfile) {
-              this.myProfile.battery = {
-                parsent: info.batteryLevel * 100,
-                chargingNow: batteryCharging,
-              }
-            }
-          }
-          this.chargeingNow = info.isCharging
-
-          // 位置情報共有の判定を行う
-          if (!this.shouldShareLocation(lat, lng)) {
-            console.log('位置情報共有の条件を満たしていません')
-            return
-          }
-
-          if (this.myProfile && !this.myProfile.guest) {
-            /** 取得した情報をサーバーに送信 */
-            try {
-              await CapacitorHttp.post({
-                url: 'https://api.map.enoki.xyz/updateGeoLocation.php',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'id': this.myProfile.userId,
-                  'token': this.myProfile.userToken ?? '',
-                  'lat': String(lat),
-                  'lng': String(lng),
-                  'batteryLevel': String(batteryLevel),
-                  'batteryCharging': String(batteryCharging),
-                  'apiid': this.env.VUE_APP_API_ID,
-                  'apitoken': this.env.VUE_APP_API_TOKEN,
-                  'apipassword': this.env.VUE_APP_API_ACCESSKEY,
-                },
-              })
-            } catch (error) {
-              console.error(error)
-              const res = await this.sendAjaxWithAuth(
-                '/updateGeoLocation.php', {
-                  id: this.myProfile.userId,
-                  token: this.myProfile.userToken,
-                  lat,
-                  lng,
-                  batteryLevel,
-                  batteryCharging,
-                },
-              )
-              if (!res || !res.body) {
-                console.error('サーバー送信エラー', res)
-              }
-            }
-          }
-
-          /** タイムラインデータをストレージと同期 */
-          let file: ReadFileResult
-          try {
-            file = await Filesystem.readFile({
-              path: 'timeline.json',
-              directory: Directory.Data,
-              encoding: Encoding.UTF8,
-            })
-          } catch {
-            await Filesystem.writeFile({
-              path: 'timeline.json',
-              directory: Directory.Data,
-              encoding: Encoding.UTF8,
-              data: JSON.stringify([]),
-            })
-
-            file = await Filesystem.readFile({
-              path: 'timeline.json',
-              directory: Directory.Data,
-              encoding: Encoding.UTF8,
-            })
-          }
-          // @ts-ignore
-          this.timelineData = JSON.parse(file.data)
-
-          // @ts-ignore
-          const distance = this.calcDistance(
-            [lat, lng],
-            [this.lastUpdatedTimeline.lat, this.lastUpdatedTimeline.lng],
-          )
-          if (distance < 20 && this.timelineData.length > 0) {
-            // 20メートル以内の移動なら、最後のデータの終了時間を更新するだけにする
-            this.timelineData.at(-1)!.endTimestamp = new Date().toLocaleString()
-          } else {
-            this.timelineData.push({
-              lat,
-              lng,
-              startTimestamp: new Date().toLocaleString(),
-              endTimestamp: new Date().toLocaleString(),
-              address: null,
-            })
-            this.lastUpdatedTimeline = {
-              lat,
-              lng,
-              timestamp: new Date().toLocaleString(),
-            }
-          }
-          // ローカルにタイムラインデータを保存
-          await Filesystem.writeFile({
-            path: 'timeline.json',
-            directory: Directory.Data,
-            encoding: Encoding.UTF8,
-            data: JSON.stringify(this.timelineData),
-          })
         }
 
         return
@@ -1028,30 +559,16 @@ div(style="height: 100%; width: 100%")
       /** 現在地を取得し、地図の中心も移動 */
       async setCurrentPosition () {
         /** 仮で最後に取得した位置情報を地図の中心に設定 */
-        this.leaflet.center = this.lastGetLocation
+        this.leaflet.center = this.myLocation
         /** バグるので0.5秒待つ */
         await setTimeout(() => {}, 500)
         this.leaflet.zoom = 15
       },
       /** 位置情報の許可を求める */
       async requestGeoPermission () {
-        if (Capacitor.getPlatform() === 'web') {
-          await Geolocation.getCurrentPosition()
-          this.requestGeoPermissionDialog = false
-          return
-        }
-
-        const permissions = await BackgroundRunner.requestPermissions({
-          apis: ['geolocation', 'notifications'],
-        })
-        if (permissions.geolocation === 'granted') {
-          this.setCurrentPosition()
-        }
-
+        await Geolocation.getCurrentPosition()
         this.requestGeoPermissionDialog = false
-
-        /** バックグラウンドでの使用許可設定メソッドへの準備 */
-        this.requestBackgroundDialog = true
+        return
       },
       /** 2地点間の距離（メートル）を計算 */
       calcDistance (latlng1: [number, number], latlng2: [number, number]) {
@@ -1061,32 +578,6 @@ div(style="height: 100%; width: 100%")
         const lng1 = latlng1[1] * R
         const lng2 = latlng2[1] * R
         return 6371e3 * Math.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lng2 - lng1)) as number
-      },
-      /** バッテリーアイコンを選択 */
-      chooseBatteryIcon (batteryPersent: number | undefined, chargingNow: boolean | undefined) {
-        if (batteryPersent === undefined) {
-          return 'mdi-battery-unknown'
-        }
-        let returnText = 'mdi-battery-'
-        if (chargingNow) {
-          returnText += 'charging-'
-        }
-        if (batteryPersent >= 95) {
-          // 100%表示の時だけこれ
-          return 'mdi-battery'
-        } else if (batteryPersent >= 90) {
-          return returnText + '90'
-        } else if (batteryPersent >= 80) {
-          return returnText + '80'
-        } else if (batteryPersent >= 60) {
-          return returnText + '60'
-        } else if (batteryPersent >= 40) {
-          return returnText + '40'
-        } else if (batteryPersent >= 20) {
-          return returnText + '20'
-        } else {
-          return returnText + '10'
-        }
       },
       /** 秒比較 */
       diffSeconds (date: Date | null | undefined) {
@@ -1099,25 +590,6 @@ div(style="height: 100%; width: 100%")
         const diff = (now.getTime() - date.getTime()) / 1000
         return diff
       },
-      /** 現在時刻と位置情報を最後に取得した時間を比較 */
-      diffLastGetTime (date: Date | null | undefined) {
-        if (!date) {
-          return ''
-        }
-        /** 差分秒 */
-        const diff = this.diffSeconds(date)
-        if (diff < 30) {
-          return 'たった今'
-        } else if (diff < 60) {
-          return `${Math.floor(diff)}秒前`
-        } else if (diff < 60 * 60) {
-          return `${Math.floor(diff / 60)}分前`
-        } else if (diff < 60 * 60 * 24) {
-          return `${Math.floor(diff / 60 / 60)}時間前`
-        } else {
-          return `${Math.floor(diff / 60 / 60 / 24)}日前`
-        }
-      },
       openGoogleMaps (latlng: [
         number, number,
       ]) {
@@ -1128,15 +600,6 @@ div(style="height: 100%; width: 100%")
       /** URLをブラウザで開く */
       async openURL (url: string) {
         await Browser.open({ url: url })
-      },
-      /** 位置情報のバックグラウンド追跡設定を開く */
-      async requestBackground () {
-        await NativeSettings.open({
-          optionAndroid: AndroidSettings.BatteryOptimization,
-          optionIOS: IOSSettings.App,
-        })
-        this.requestBackgroundDialog = false
-        this.setCurrentPosition()
       },
       /** 友達を検索 */
       async searchFriend (searchId: string) {
@@ -1160,35 +623,6 @@ div(style="height: 100%; width: 100%")
           return
         }
         this.searchFriendLoading = false
-      },
-      /** 友達の位置情報を取得して更新 */
-      async updateLocation () {
-        const res = await this.sendAjaxWithAuth('/getMyFriendList.php', {
-          id: this.myProfile?.userId,
-          token: this.myProfile?.userToken,
-          withLocation: true,
-        })
-        if (res && res.body && res.body.friendList) {
-          const friendList = []
-          // friend.friendProfileがdetailCardTargetに反映される
-          for (const friend of res.body.friendList) {
-            if (friend.status == 'friend' && friend.location) {
-              friend.friendProfile.userId = friend.friendRealId
-              friend.friendProfile.battery = {
-                parsent: friend.location.batteryLevel,
-                chargingNow: friend.location.batteryCharging ? true : false,
-              }
-              friend.friendProfile.location = [
-                friend.location.lat,
-                friend.location.lng,
-              ]
-              friend.friendProfile.lastGetLocationTime = new Date(friend.location.unixtime * 1000)
-              friendList.push(friend)
-            }
-          }
-          this.friendList = friendList
-          localStorage.setItem('locationList', JSON.stringify(friendList))
-        }
       },
       /**
        * 2つのDateオブジェクトの差が10秒以内か判定する
@@ -1236,71 +670,6 @@ div(style="height: 100%; width: 100%")
           url: content,
           title: title,
         })
-      },
-      /** 位置情報共有が許可されているかチェック */
-      shouldShareLocation (lat: number, lng: number): boolean {
-        // 一時停止中なら共有しない
-        if (this.settings.location.pause) {
-          return false
-        }
-
-        // 時間制限が有効な場合、現在時刻をチェック
-        if (this.settings.location.shareTime.enabled && !this.isWithinTimeRange()) {
-          return false
-        }
-
-        // 場所制限が有効な場合、距離をチェック
-        if (this.settings.location.shareLocation.enabled && !this.isWithinLocationRange(lat, lng)) {
-          return false
-        }
-
-        return true
-      },
-      /** 現在時刻が共有時間範囲内かチェック */
-      isWithinTimeRange (): boolean {
-        const now = new Date()
-        const currentHour = now.getHours()
-        const currentMin = now.getMinutes()
-        const currentTime = currentHour * 60 + currentMin
-
-        const startTime = this.settings.location.shareTime.start.hour * 60
-          + this.settings.location.shareTime.start.min
-        const endTime = this.settings.location.shareTime.end.hour * 60
-          + this.settings.location.shareTime.end.min
-
-        // 時間が日をまたぐ場合（例: 22:00～6:00）
-        // eslint-disable-next-line unicorn/prefer-ternary
-        if (startTime > endTime) {
-          // 日をまたぐ場合: 開始時刻以降 または 終了時刻以前
-          return currentTime >= startTime || currentTime <= endTime
-        } else {
-          // 通常の場合: 開始時刻以降 かつ 終了時刻以前
-          return currentTime >= startTime && currentTime <= endTime
-        }
-      },
-      /** 現在地が共有範囲内かチェック（距離計算） */
-      isWithinLocationRange (lat: number, lng: number): boolean {
-        const centerLat = this.settings.location.shareLocation.centerLatlng[0]
-        const centerLng = this.settings.location.shareLocation.centerLatlng[1]
-        const maxDistance = this.settings.location.shareLocation.distance
-
-        // 中心座標が設定されていない場合は範囲外とみなす
-        // eslint-disable-next-line @stylistic/no-mixed-operators
-        if (centerLat === undefined || centerLng === undefined || centerLat === 0 && centerLng === 0) {
-          return false
-        }
-
-        // Haversine公式で2点間の距離を計算（メートル）
-        const R = 6_371_000 // 地球の半径（メートル）
-        const dLat = (lat - centerLat) * Math.PI / 180
-        const dLng = (lng - centerLng) * Math.PI / 180
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-          + Math.cos(centerLat * Math.PI / 180) * Math.cos(lat * Math.PI / 180)
-          * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        const distance = R * c
-
-        return distance <= maxDistance
       },
     },
   }

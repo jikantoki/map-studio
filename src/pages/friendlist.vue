@@ -156,12 +156,6 @@ v-card(
           p {{ detailCardTarget.message }}
         v-btn.my-2(
           text
-          @click="$router.push(`/?viewUser=${detailCardTarget.userId}`)"
-          prepend-icon="mdi-map-marker"
-          style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
-        ) 現在地を表示
-        v-btn.my-2(
-          text
           @click="$router.push(`/user/${detailCardTarget.userId}`)"
           prepend-icon="mdi-account-circle"
           style="background-color: rgb(var(--v-theme-primary)); width: 100%;"

@@ -2,20 +2,11 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'xyz.enoki.mapstudio',
-  appName: 'Mapstudio',
+  appName: 'Map Studio',
   webDir: 'dist',
   plugins: {
     StatusBar: {
       overlaysWebView: false,
-    },
-    BackgroundRunner: {
-      label: 'xyz.enoki.mapstudio.background',
-      src: 'runners/background-runner.js',
-      event: 'MapstudioBackgroundRunner',
-      repeat: true,
-      /** OSの制約で15分間隔 */
-      interval: 15,
-      autoStart: true,
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],

@@ -164,11 +164,13 @@ define('SMTP_Port', 587);
 <IfModule mod_rewrite.c>
 RewriteEngine on
 RewriteBase /
+RewriteRule ^(.+)$ map-studio/php/ [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.+)$ php/$1 [L]
+RewriteRule ^(.+)$ map-studio/php/$1 [L]
 </IfModule>
 Header append Access-Control-Allow-Origin: "*"
+Header append Access-Control-Allow-Headers: "*"
 ```
 
 ### 3. MySQLのセットアップ

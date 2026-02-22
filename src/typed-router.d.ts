@@ -29,9 +29,7 @@ declare module 'vue-router/auto-routes' {
     '/settings/': RouteRecordInfo<'/settings/', '/settings', Record<never, never>, Record<never, never>>,
     '/settings/developer-options': RouteRecordInfo<'/settings/developer-options', '/settings/developer-options', Record<never, never>, Record<never, never>>,
     '/settings/display': RouteRecordInfo<'/settings/display', '/settings/display', Record<never, never>, Record<never, never>>,
-    '/settings/privacy': RouteRecordInfo<'/settings/privacy', '/settings/privacy', Record<never, never>, Record<never, never>>,
     '/settings/profile': RouteRecordInfo<'/settings/profile', '/settings/profile', Record<never, never>, Record<never, never>>,
-    '/settings/timeline': RouteRecordInfo<'/settings/timeline', '/settings/timeline', Record<never, never>, Record<never, never>>,
     '/terms': RouteRecordInfo<'/terms', '/terms', Record<never, never>, Record<never, never>>,
     '/tutorial': RouteRecordInfo<'/tutorial', '/tutorial', Record<never, never>, Record<never, never>>,
     '/user/[userId]': RouteRecordInfo<'/user/[userId]', '/user/:userId', { userId: ParamValue<true> }, { userId: ParamValue<false> }>,
@@ -92,16 +90,8 @@ declare module 'vue-router/auto-routes' {
       routes: '/settings/display'
       views: never
     }
-    'src/pages/settings/privacy.vue': {
-      routes: '/settings/privacy'
-      views: never
-    }
     'src/pages/settings/profile.vue': {
       routes: '/settings/profile'
-      views: never
-    }
-    'src/pages/settings/timeline.vue': {
-      routes: '/settings/timeline'
       views: never
     }
     'src/pages/terms.vue': {

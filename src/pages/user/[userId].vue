@@ -220,7 +220,6 @@ v-dialog(v-model="followDialogMessage")
 
 <script lang="ts">
   import { App } from '@capacitor/app'
-  import { Clipboard } from '@capacitor/clipboard'
   import { Share } from '@capacitor/share'
   import QRCode from 'qrcode'
   import mixins from '@/mixins/mixins'

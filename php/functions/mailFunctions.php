@@ -9,7 +9,7 @@ use PHPMailer\PHPMailer\Exception;
 // 本当はここenvから取得したい
 define('MailHeader', "
 <div style=\"text-align: center;\">
-<img src=\"https://map.enoki.xyz/wp-content/uploads/2026/01/icon.png\" alt=\"Map studio\" height=\"64px\">
+<img src=\"https://map.enoki.xyz/icon.png\" alt=\"Map studio\" height=\"64px\">
 </div>
 <br>
 <p>

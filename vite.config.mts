@@ -68,7 +68,7 @@ export default defineConfig({
     ],
   },
   server: {
-    port: 9000,
+    port: 4040,
     strictPort: true,
   },
 })
