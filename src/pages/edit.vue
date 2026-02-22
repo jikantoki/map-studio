@@ -1,16 +1,38 @@
 <template lang="pug">
-v-card(
-  style="width: 100%; height: 100%;"
-  :class="settings.hidden.isAndroid15OrHigher ? 'top-android-15-or-higher' : ''"
-  )
-  v-card-actions
-    .ml-2(style="font-size: 1.3em; height: 4em; display: flex; align-items: center;")
-      p Map Studio
-    v-spacer
-  v-card-text(style="height: inherit; overflow-y: auto;")
-    //- 閲覧権限のある地図のリスト
-    p サーバーリスト
-    .content
+div(style="height: 100%; width: 100%")
+  LMap(
+    :zoom="leaflet.zoom"
+    :center="leaflet.center"
+    style="height: calc(100% - 5em); width: 100%"
+    :useGlobalLeaflet="false"
+    @update:zoom="leaflet.zoom = $event"
+    @update:center="leaflet.center = $event"
+    :options="{ zoomControl: false }"
+    ref="map"
+    )
+    LTileLayer(
+      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+    )
+    //- 自分の現在地マーカー
+    LMarker(
+      :lat-lng="myLocation"
+      @click="detailCardTarget = myProfile"
+      )
+      LIcon(
+        :icon-size="[0,0]"
+        style="border: none;"
+        :icon-anchor="[16, 16]"
+        )
+        div(style="display: flex; align-items: center; width: auto;")
+          img(
+            loading="lazy"
+            :src="myProfile?.icon ?? '/account_default.jpg'"
+            style="height: 32px; width: 32px; border-radius: 9999px; border: solid 1px #000;"
+            onerror="this.src='/account_default.jpg'"
+            )
+          p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
+            span(v-if="myProfile") {{ myProfile.name ?? myProfile.userId }}
   //-- 下部のアクションバー --
   .action-bar
     .buttons
@@ -18,8 +40,15 @@ v-card(
         v-ripple
         @click="setCurrentPosition"
         )
-        v-icon mdi-home
-        p トップ
+        v-icon mdi-map-marker
+        p マップ
+      .button(
+        v-ripple
+        @click="timelineMode = true"
+        style="opacity: 0.8;"
+        )
+        v-icon mdi-chart-timeline-variant
+        p タイムライン
       .button(
         v-ripple
         @click="optionsDialog = true"
@@ -28,19 +57,19 @@ v-card(
         v-icon mdi-dots-vertical
         p その他
     .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
-  //-- 右下のボタン --
+  //-- 右下の現在地ボタン --
   .right-bottom-buttons
     .current-button
       v-btn(
         size="x-large"
         icon
-        @click="$router.push('edit')"
+        @click="setCurrentPosition"
         style="background-color: rgb(var(--v-theme-primary)); color: white"
         )
-        v-icon mdi-plus
+        v-icon mdi-crosshairs-gps
     .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
   //-- 左上の友達リストボタン --
-  //- .left-top-buttons
+  .left-top-buttons
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
     .current-button
       v-btn(
@@ -65,8 +94,7 @@ v-card(
           style="height: 4em; width: 4em; border-radius: 9999px; border: solid 2px #000;"
           onerror="this.src='/account_default.jpg'"
           )
-    //- QRコードボタン
-    //- .account-button.my-2
+    .account-button.my-2
       v-btn(
         v-ripple
         @click="$router.push('/qrcode')"
@@ -74,6 +102,52 @@ v-card(
         color="rgb(var(--v-theme-primary)"
         size="x-large"
       )
+  //- 地図で押したアカウントの詳細カード
+  .detail-card-target
+    v-card(
+      v-if="detailCardTarget"
+      style="position: fixed; bottom: 0; left: 0; z-index: 1000; width: 100%; border-radius: 16px 16px 0 0;"
+    )
+      v-card-actions
+        p.ml-2(
+          style="display: flex; align-items: center;"
+        )
+          img.mr-2(
+            :src="detailCardTarget.icon && detailCardTarget.icon.length ? detailCardTarget.icon : '/account_default.jpg'"
+            style="height: 1.5em; width: 1.5em; border-radius: 9999px;"
+            onerror="this.src='/account_default.jpg'"
+            )
+          span {{ detailCardTarget.name ? detailCardTarget.name : detailCardTarget.userId }}
+        v-spacer
+        v-btn(
+          text
+          @click="detailCardTarget = null"
+          icon="mdi-close"
+          )
+      v-card-text
+        .info
+          v-icon mdi-card-account-details-outline
+          p @{{ detailCardTarget.userId }}
+        v-btn.my-2(
+          text
+          v-if="!detailCardTarget.guest"
+          @click="$router.push(`/user/${detailCardTarget.userId}`)"
+          prepend-icon="mdi-account-circle"
+          style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
+        ) プロフィールを表示
+        v-btn.my-2(
+          text
+          v-else
+          @click="$router.push(`/login`)"
+          prepend-icon="mdi-login"
+          style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
+        ) ログイン
+        v-btn.my-2(
+          text
+          @click="openGoogleMaps(detailCardTarget.location)"
+          prepend-icon="mdi-map-marker"
+          style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
+        ) Google Mapsで開く
   //-- 友達検索ダイアログ --
   v-dialog(
     v-model="searchFriendDialog"
@@ -113,7 +187,9 @@ v-card(
     transition="dialog-bottom-transition"
     fullscreen
   )
-    v-card
+    v-card(
+      style="width: 100%; height: 100%;"
+    )
       .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
       v-card-actions
         p.ml-2(class="headline" style="font-size: 1.3em") ようこそ
@@ -161,6 +237,10 @@ v-card(
               style="background-color: rgb(var(--v-theme-primary)); color: white;"
             ) ログイン
         v-list.options-list
+          v-list-item.item( @click="timelineMode = true" )
+            .icon-and-text
+              v-icon mdi-chart-timeline-variant
+              v-list-item-title タイムライン
           v-list-item.item( @click="searchFriendDialog = true" )
             .icon-and-text
               v-icon mdi-magnify
@@ -192,10 +272,44 @@ v-card(
             .icon-and-text
               v-icon mdi-information
               v-list-item-title このアプリについて
-          v-list-item.item( @click="share('https://play.google.com/store/apps/dev?id=8940000495375956936', 'エノキ電気')" )
+          v-list-item.item( @click="share('https://play.google.com/store/apps/details?id=xyz.enoki.mapstudio', 'Map studio')" )
             .icon-and-text
               v-icon mdi-share-variant
               v-list-item-title このアプリを共有する
+  //-- 位置情報利用許可ダイアログ --
+  v-dialog(
+    v-model="requestGeoPermissionDialog"
+    persistent
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") 位置情報利用のお願い
+      v-card-text
+        .text-content
+          p このアプリは現在地を表示するために位置情報を利用します。
+          .my-2
+          p 続行するには、以下の「ええで！」を押してください。
+        .privacy-policy-link.mt-4
+          p
+            span 詳細は
+            a.pa-2.ma-2(
+              @click="openURL('https://enoki.xyz/privacy')"
+              style="background-color: rgb(var(--v-theme-primary)); color: white; cursor: pointer; border-radius: 8px;"
+            ) プライバシーポリシー
+            span をご覧ください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="requestGeoPermissionDialog = false; requestBackgroundDialog = true"
+          prepend-icon="mdi-close"
+          ) 嫌だ！
+        v-btn(
+          style="background-color: rgb(var(--v-theme-primary)); color: white"
+          text
+          @click="requestGeoPermission"
+          prepend-icon="mdi-check"
+          ) ええで！
   v-dialog(
     v-model="acceptDialog"
     persistent
@@ -217,19 +331,40 @@ v-card(
 <script lang="ts">
   import { App } from '@capacitor/app'
   import { Browser } from '@capacitor/browser'
+  import { Geolocation } from '@capacitor/geolocation'
   import { Share } from '@capacitor/share'
+  import { LIcon, LMap, LMarker, LTileLayer } from '@vue-leaflet/vue-leaflet'
 
-  import { Toast } from '@capacitor/toast'
+  import muniArray from '@/js/muni'
   // @ts-ignore
   import mixins from '@/mixins/mixins'
   import { useMyProfileStore } from '@/stores/myProfile'
   import { useSettingsStore } from '@/stores/settings'
+  import 'leaflet/dist/leaflet.css'
 
   export default {
-    components: {},
+    components: {
+      LMap,
+      LMarker,
+      LTileLayer,
+      LIcon,
+    },
     mixins: [mixins],
     data () {
       return {
+        /** Leafletの設定 */
+        leaflet: {
+          zoom: 13,
+          center: [35.690_430_765_555_42, 139.700_211_526_229_54],
+        },
+        /** 位置情報利用許可ダイアログの表示フラグ */
+        requestGeoPermissionDialog: false,
+        /** 自分の現在地 */
+        myLocation: [0, 0],
+        /** 詳細カードのターゲット */
+        detailCardTarget: null as {} | null,
+        /** 詳細カードに現在の住所を表示 */
+        detailCardTargetAddress: null as string | null,
         /** オプションダイアログの表示フラグ */
         optionsDialog: false,
         /** 自分のプロフィール */
@@ -256,6 +391,21 @@ v-card(
     },
     computed: {},
     watch: {
+      /** プロフィール詳細を押された時に、現在の住所を表示する */
+      detailCardTarget: {
+        handler: async function (newProfile) {
+          if (!newProfile || !newProfile.location) {
+            this.detailCardTargetAddress = null
+            return
+          } else {
+            const latlng = newProfile.location
+            this.detailCardTargetAddress = await this.getAddress(latlng[0], latlng[1])
+            return
+          }
+        },
+        deep: true,
+        immediate: true,
+      },
       /** ようこそ画面の表示状態を保存 */
       optionsDialog: {
         handler: async function (dialog: boolean) {
@@ -273,13 +423,29 @@ v-card(
         this.optionsDialog = true
       }
 
+      /** ローカルストレージから最後に取得した位置情報を読み込み */
+      const localStorageLatlng = localStorage.getItem('latlng')
+      if (localStorageLatlng) {
+        this.myLocation = JSON.parse(localStorageLatlng)
+        /** バグるので0.1秒待ってから地図の中心を設定 */
+        setTimeout(() => {
+          this.leaflet.center = this.myLocation
+          this.leaflet.zoom = 15
+        }, 100)
+      }
+
       /** ログイン情報 */
       if (this.myProfile.$state.guest == false) {
+        if (this.myProfile.lastGetLocationTime) {
+          this.myProfile.lastGetLocationTime = new Date(this.myProfile.lastGetLocationTime)
+        }
+
         setTimeout(async () => {
           const token = this.myProfile.userToken
           const profile: any = await this.getProfile(this.myProfile.userId ?? '')
           if (profile) {
             profile.userToken = token
+            profile.battery = this.myProfile.battery
             profile.guest = false
             this.myProfile = {
               ...this.myProfile,
@@ -290,6 +456,21 @@ v-card(
       } else {
         this.myProfile.reset()
       }
+
+      /** 位置情報の許可を確認 */
+      Geolocation.checkPermissions().then(result => {
+        if (result.location === 'granted') {
+          this.setCurrentPosition()
+        } else {
+          Geolocation.requestPermissions().then(result => {
+            if (result.location === 'granted') {
+              this.setCurrentPosition()
+            }
+          }).catch(() => {
+            this.requestGeoPermissionDialog = true
+          })
+        }
+      })
 
       /** バックボタンのリスナーを追加 */
       App.addListener('backButton', () => {
@@ -302,6 +483,14 @@ v-card(
         } else if (this.optionsDialog) {
           /** オプションダイアログを閉じる */
           this.optionsDialog = false
+        } else if (this.requestGeoPermissionDialog) {
+          /** 位置情報利用許可ダイアログを閉じる */
+          this.requestGeoPermissionDialog = false
+        } else if (this.detailCardTarget) {
+          /** 詳細カードを閉じる */
+          this.detailCardTarget = null
+        } else if (this.requestGeoPermissionDialog) {
+          // ここはあえて何もしない
         } else if (this.$route.path === '/') {
           /** ルートページならアプリを最小化 */
           App.minimizeApp()
@@ -310,6 +499,18 @@ v-card(
           this.$router.back()
         }
       })
+
+      /** 現在地を監視 */
+      Geolocation.watchPosition({
+        enableHighAccuracy: true,
+        timeout: 20_000,
+        interval: 20_000,
+      }, position =>
+        this.watchPosition(position),
+      )
+
+      /** 現在地を取得し、地図の中心も移動 */
+      await this.setCurrentPosition()
 
       // 承認していない友達リクエストがあったらポップアップを表示
       const res: any = await this.sendAjaxWithAuth('/getMyFriendList.php', {
@@ -337,6 +538,44 @@ v-card(
       App.removeAllListeners()
     },
     methods: {
+      /** 位置情報監視のコールバック */
+      async watchPosition (position: {
+        coords: {
+          [key: string]: any
+        }
+      } | null) {
+        // console.log('最終更新:', new Date(this.lastUpdateMyLocationTime))
+        if (position) {
+          const lat: number = position.coords.latitude
+          const lng: number = position.coords.longitude
+          this.myLocation = [lat, lng]
+        }
+
+        return
+      },
+      /** 現在地を取得し、地図の中心も移動 */
+      async setCurrentPosition () {
+        /** 仮で最後に取得した位置情報を地図の中心に設定 */
+        this.leaflet.center = this.myLocation
+        /** バグるので0.5秒待つ */
+        await setTimeout(() => {}, 500)
+        this.leaflet.zoom = 15
+      },
+      /** 位置情報の許可を求める */
+      async requestGeoPermission () {
+        await Geolocation.getCurrentPosition()
+        this.requestGeoPermissionDialog = false
+        return
+      },
+      /** 2地点間の距離（メートル）を計算 */
+      calcDistance (latlng1: [number, number], latlng2: [number, number]) {
+        const R = Math.PI / 180
+        const lat1 = latlng1[0] * R
+        const lat2 = latlng2[0] * R
+        const lng1 = latlng1[1] * R
+        const lng2 = latlng2[1] * R
+        return 6371e3 * Math.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lng2 - lng1)) as number
+      },
       /** 秒比較 */
       diffSeconds (date: Date | null | undefined) {
         if (!date) {
@@ -348,7 +587,6 @@ v-card(
         const diff = (now.getTime() - date.getTime()) / 1000
         return diff
       },
-      /** Googleマップで開く */
       openGoogleMaps (latlng: [
         number, number,
       ]) {
@@ -393,6 +631,35 @@ v-card(
         // 10秒 = 10000ミリ秒
         const diffInMilliseconds = Math.abs(date1.getTime() - date2.getTime())
         return diffInMilliseconds <= 10_000
+      },
+      /**
+       * 緯度経度から住所を取得
+       * @param lat 緯度
+       * @param lng 経度
+       */
+      async getAddress (lat: number, lng: number) {
+        const geoCodingUrl = new URL(
+          'https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress',
+        )
+        geoCodingUrl.searchParams.set('lat', String(lat))
+        geoCodingUrl.searchParams.set('lon', String(lng))
+        return fetch(geoCodingUrl.toString())
+          .then(res => res.json())
+          .then(json => {
+            const data = json.results
+            const muniData = muniArray[data.muniCd]
+            if (!muniData) {
+              return '住所不明'
+            }
+            const splitedMuniData = muniData.split(',')
+            const pref = splitedMuniData[1]
+            const city = splitedMuniData[3]
+            const address = data.lv01Nm
+            return `${pref}${city}${address}`
+          })
+          .catch(() => {
+            return null
+          })
       },
       /** シェアダイアログ */
       async share (content: string, title = '') {
