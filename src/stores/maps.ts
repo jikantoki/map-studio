@@ -1,30 +1,42 @@
 import { defineStore } from 'pinia'
 
+/** 地図のデータ構造 */
 export type Map = {
   /** 作った時間unixtime */
-  createdAt: number
-  icon: string | null
+  createdAt: number | undefined
+  /** 地図のアイコン画像URL（オーナー以外編集不可） */
+  icon: string | undefined
   /** 地図の説明 */
-  description: string | null
-  /** 地図の名前 */
+  description: string | undefined
+  /** 地図の名前（オーナー以外編集不可） */
   name: string
-  /** 公開設定 */
+  /** 公開設定（オーナー以外編集不可） */
   isPublic: boolean
-  /** サーバーID */
+  /** サーバーID（URLに表示されます・オーナー以外編集不可） */
   serverId: string
   /** 作った人のユーザーID */
   ownerUserId: string
   /** 地点リスト */
   points: {
     /** 地点の名前 */
-    name: string
+    name: string | undefined
     /** 地点の説明 */
-    description: string | null
-    /** 地点のアイコン */
-    icon: string | null
+    description: string | undefined
+    /** 地点のアイコン画像URL */
+    iconImg: string | undefined
+    /** 地点のアイコンMdi */
+    iconMdi: string | undefined
+    /** 地点のアイコンの色 */
+    iconColor: string | undefined
     /** 地点の位置 */
     latlng: [lat: number, lng: number]
+    /** 追加・編集した人のユーザーID */
+    authorUserId: string | undefined
   }[]
+  /** 閲覧可能ユーザーIDリスト（isPublicがtrueの場合に有効） */
+  sharedUserIds: string[]
+  /** 編集可能ユーザーIDリスト */
+  editorUserIds: string[]
 }
 
 export const useMapsStore = defineStore('maps', {

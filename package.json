@@ -42,6 +42,7 @@
     "vue": "^3.5.21",
     "vue-qrcode-reader": "^5.7.3",
     "vue-router": "^4.5.1",
+    "vue3-icon-picker": "^0.3.3",
     "vuetify": "^3.10.1"
   },
   "devDependencies": {

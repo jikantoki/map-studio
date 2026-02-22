@@ -21,9 +21,9 @@ declare module 'vue-router/auto-routes' {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
     '/[ready]': RouteRecordInfo<'/[ready]', '/:ready', { ready: ParamValue<true> }, { ready: ParamValue<false> }>,
     '/about': RouteRecordInfo<'/about', '/about', Record<never, never>, Record<never, never>>,
-    '/edit': RouteRecordInfo<'/edit', '/edit', Record<never, never>, Record<never, never>>,
     '/friendlist': RouteRecordInfo<'/friendlist', '/friendlist', Record<never, never>, Record<never, never>>,
     '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
+    '/map/[serverId]': RouteRecordInfo<'/map/[serverId]', '/map/:serverId', { serverId: ParamValue<true> }, { serverId: ParamValue<false> }>,
     '/password_reset': RouteRecordInfo<'/password_reset', '/password_reset', Record<never, never>, Record<never, never>>,
     '/qrcode': RouteRecordInfo<'/qrcode', '/qrcode', Record<never, never>, Record<never, never>>,
     '/registar': RouteRecordInfo<'/registar', '/registar', Record<never, never>, Record<never, never>>,
@@ -59,16 +59,16 @@ declare module 'vue-router/auto-routes' {
       routes: '/about'
       views: never
     }
-    'src/pages/edit.vue': {
-      routes: '/edit'
-      views: never
-    }
     'src/pages/friendlist.vue': {
       routes: '/friendlist'
       views: never
     }
     'src/pages/login.vue': {
       routes: '/login'
+      views: never
+    }
+    'src/pages/map/[serverId].vue': {
+      routes: '/map/[serverId]'
       views: never
     }
     'src/pages/password_reset.vue': {

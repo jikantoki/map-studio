@@ -1,0 +1,1011 @@
+<template lang="pug">
+div(style="height: 100%; width: 100%")
+  LMap(
+    :zoom="leaflet.zoom"
+    :center="leaflet.center"
+    style="height: calc(100% - 5em); width: 100%"
+    :useGlobalLeaflet="false"
+    @update:zoom="leaflet.zoom = $event"
+    @update:center="leaflet.center = $event"
+    @click="onMapClick"
+    :options="{ zoomControl: false }"
+    ref="map"
+    )
+    LTileLayer(
+      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+    )
+    //- 自分の現在地マーカー
+    //- LMarker(
+      :lat-lng="myLocation"
+      )
+      LIcon(
+        :icon-size="[0,0]"
+        style="border: none;"
+        :icon-anchor="[16, 16]"
+        )
+        div(style="display: flex; align-items: center; width: auto;")
+          img(
+            loading="lazy"
+            :src="myProfile?.icon ?? '/account_default.jpg'"
+            style="height: 32px; width: 32px; border-radius: 9999px; border: solid 1px #000;"
+            onerror="this.src='/account_default.jpg'"
+            )
+          p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
+            span(v-if="myProfile") {{ myProfile.name ?? myProfile.userId }}
+    LMarker(
+      v-for="(mapPoint, index) in mapData.points"
+      :key="index"
+      :lat-lng="mapPoint.latlng"
+      @click="detailCardTarget = mapPoint"
+      )
+      LIcon(
+        :icon-size="[0,0]"
+        style="border: none;"
+        :icon-anchor="[16, 16]"
+        )
+        div(style="display: flex; align-items: center; width: auto;")
+          .icon-wrap(
+            v-if="mapPoint.iconMdi"
+            style="display: flex; align-items: center; justify-content: center; height: 32px; width: 32px; border-radius: 9999px; background-color: white; border: solid 1px #000;"
+          )
+            Icon(
+              v-if="mapPoint.iconMdi"
+              :data="mapPoint.iconMdi"
+              size="24px"
+              :style="`color: ${mapPoint.iconColor ? mapPoint.iconColor : 'rgb(var(--v-theme-primary))'}; width: 32px; height: 32px; transform: translate(3px, 3px);`"
+              )
+          img(
+            v-else-if="mapPoint.iconImg"
+            loading="lazy"
+            :src="mapPoint.iconImg ?? '/icons/question.png'"
+            style="height: 32px; width: 32px;"
+            onerror="this.src='/icons/question.png'"
+            )
+          p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
+            span {{ mapPoint.name }}
+  //-- 下部のアクションバー --
+  .action-bar
+    .buttons
+      .button(
+        v-ripple
+        @click="setCurrentPosition"
+        )
+        v-icon mdi-map-marker
+        p マップ
+      .button(
+        v-ripple
+        @click="optionsDialog = true"
+        style="opacity: 0.8;"
+        )
+        v-icon mdi-cog
+        p サーバー情報
+    .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+  .right-bottom-buttons
+    //- 編集モードでないときは編集ボタンを表示
+    .current-button
+      v-btn(
+        v-if="!editMode && isEditorable"
+        size="x-large"
+        icon
+        @click="editMode = true"
+        style="background-color: rgba(var(--v-theme-surface), 0.9);"
+        )
+        v-icon mdi-pencil
+      //- 編集モードのときは保存ボタンを表示
+      v-btn(
+        v-if="editMode && isEditorable"
+        size="x-large"
+        icon
+        @click="optionsDialog = true"
+        style="background-color: rgba(var(--v-theme-surface), 0.9);"
+        )
+        v-icon mdi-content-save
+    //-- 右下の現在地ボタン --
+    .current-button
+      v-btn(
+        size="x-large"
+        icon
+        @click="setCurrentPosition"
+        style="background-color: rgb(var(--v-theme-primary)); color: white"
+        )
+        v-icon mdi-crosshairs-gps
+    .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+  //-- 左上の戻るボタン --
+  .left-top-buttons
+    .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+    .current-button
+      v-btn(
+        size="x-large"
+        icon
+        @click="editMode ? editModeEndDialog = true : $router.back()"
+        style="background-color: rgba(var(--v-theme-surface), 0.9);"
+        )
+        v-icon mdi-arrow-left
+  //-- 右上のオプションボタン --
+  .right-top-buttons
+    .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+    .account-button
+      .button(
+        v-ripple
+        @click="optionsDialog = true"
+        style="cursor: pointer; border-radius: 9999px; height: 4em; width: 4em;"
+        )
+        img(
+          loading="lazy"
+          :src="myProfile && myProfile.icon ? myProfile.icon : '/icons/question.png'"
+          style="height: 4em; width: 4em; border-radius: 9999px; border: solid 2px #000; background-color: white;"
+          onerror="this.src='/icons/question.png'"
+          )
+  //- 編集モードであることを表示
+  .edit-mode-indicator.py-2(
+    v-if="editMode"
+    style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000; width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
+    )
+    .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+    p 編集モード
+  //- 地図で押したアカウントの詳細カード
+  .detail-card-target
+    v-card(
+      v-if="detailCardTarget"
+      style="position: fixed; bottom: 0; left: 0; z-index: 1000; width: 100%; border-radius: 16px 16px 0 0;"
+    )
+      v-card-actions
+        p.ml-2(
+          style="display: flex; align-items: center;"
+        )
+          .icon-wrap.mr-2(
+            v-if="detailCardTarget.iconMdi"
+            style="display: flex; align-items: center; justify-content: center; height: 2em; width: 2em; border-radius: 9999px; background-color: white; border: solid 1px #000;"
+          )
+            Icon(
+              :data="detailCardTarget.iconMdi"
+              size="1.3em"
+              :style="`color: ${detailCardTarget.iconColor ? detailCardTarget.iconColor : 'rgb(var(--v-theme-primary))'}`"
+              )
+          img.mr-2(
+            v-else-if="detailCardTarget.iconImg"
+            loading="lazy"
+            :src="detailCardTarget.iconImg && detailCardTarget.iconImg.length ? detailCardTarget.iconImg : '/icons/question.png'"
+            style="height: 1.5em; width: 1.5em; border-radius: 9999px;"
+            onerror="this.src='/icons/question.png'"
+            )
+          span {{ editMode ? `${detailCardTarget.name}を編集` : detailCardTarget.name }}
+        v-spacer
+        v-btn(
+          text
+          @click="detailCardTarget = null"
+          icon="mdi-close"
+          )
+      v-card-text
+        .info(
+          v-if="!editMode"
+        )
+          v-icon mdi-map-marker
+          p {{ detailCardTarget.description ? detailCardTarget.description : '説明なし' }}
+        .edit-form(
+          v-else
+        )
+          .info
+            v-icon mdi-map-marker
+            p
+              span 登録者:
+              b.ml-2 {{ detailCardTarget.authorUserId ? `@${detailCardTarget.authorUserId}` : '不明' }}
+          .info
+            v-icon mdi-image
+            .icon-settings(
+              style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
+            )
+              p アイコンを設定
+              Vue3IconPicker(
+                v-model="detailCardTarget.iconMdi"
+                searchPlaceholder="アイコン名で検索…"
+                placeholder="アイコンを選択"
+                :theme="$vuetify.theme.global.name"
+                selectedIconBgColor="rgb(var(--v-theme-primary))"
+                selectedIconColor="white"
+                inputSize="large"
+                valueType="name"
+                iconLibrary="material"
+              )
+              p アイコン名: {{ detailCardTarget.iconMdi }}
+          .info.mt-4.mb-6
+            v-icon mdi-palette
+            v-btn(
+              :style="`background-color: ${detailCardTarget.iconColor ? detailCardTarget.iconColor : 'rgb(var(--v-theme-primary))'}; color: white;`"
+            ) 色を選択
+              v-menu(
+                activator="parent"
+                location="bottom"
+              )
+                v-color-picker(
+                  v-model="detailCardTarget.iconColor"
+                  show-swatches
+                  hide-canvas
+                  hide-inputs
+                  hide-mode-switch
+                  mode="hexa"
+                  @click.stop
+                )
+          .info
+            v-icon mdi-tag
+            v-text-field(
+              v-model="detailCardTarget.name"
+              label="名前"
+              placeholder="例: 東京タワー"
+              variant="outlined"
+              style="flex: 1;"
+              clearable
+            )
+          .info
+            v-icon mdi-text-box-edit-outline
+            v-textarea(
+              v-model="detailCardTarget.description"
+              label="説明"
+              placeholder="例: 東京タワーの説明"
+              variant="outlined"
+              style="flex: 1;"
+              clearable
+              auto-grow
+              rows="1"
+              max-rows="5"
+            )
+        v-btn.my-2(
+          v-if="!editMode"
+          text
+          @click="openGoogleMaps(detailCardTarget.location)"
+          prepend-icon="mdi-map-marker"
+          style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
+        ) Google Mapsで開く
+        v-btn.my-2(
+          v-if="editMode"
+          text
+          @click="mapData.points = mapData.points.filter((point) => point !== detailCardTarget); detailCardTarget = null"
+          prepend-icon="mdi-delete"
+          style="background-color: rgb(var(--v-theme-error)); width: 100%;"
+        ) 削除
+        v-btn.my-2(
+          v-if="editMode"
+          text
+          @click="detailCardTarget = null"
+          prepend-icon="mdi-close"
+          style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
+        ) 閉じる
+        .my-4
+  //-- オプションダイアログ --
+  v-dialog(
+    v-model="optionsDialog"
+    transition="dialog-bottom-transition"
+    fullscreen
+  )
+    v-card(
+      style="width: 100%; height: 100%;"
+    )
+      .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+      v-card-actions
+        p.ml-2(class="headline" style="font-size: 1.3em") サーバー情報
+        v-spacer
+        v-btn(
+          text
+          @click="optionsDialog = false"
+          icon="mdi-close"
+          )
+      v-card-text
+        .account-details(
+          style="display: flex; flex-direction: column; align-items: center; gap: 1em; margin-bottom: 1em;"
+        )
+          .account-img
+            img(
+              :src="mapData.icon ? mapData.icon : '/icons/question.png'"
+              style="height: 8em; width: 8em; border-radius: 9999px; background-color: white; border: solid 2px #000;"
+              onerror="this.src='/icons/question.png'"
+              )
+          .account-info(
+            style="text-align: center;"
+            v-if="!editMode"
+          )
+            p(
+              style="font-size: 1.2em; margin: 0; padding: 0;"
+              ) {{ mapData.name ? mapData.name : '無題の地図' }}
+            p(style="margin: 0; padding: 0;")
+              | {{ mapData.serverId }}
+            p(style="margin: 0; padding: 0;")
+              | {{ mapData.description ? mapData.description : '説明なし' }}
+        .server-info-form(
+          v-if="!editMode"
+          style="display: flex; flex-direction: column; gap: 1em;"
+        )
+          p 公開設定: {{ mapData.isPublic ? '公開' : '非公開' }}
+          p 閲覧可能ユーザーIDリスト: {{ mapData.sharedUserIds.length ? mapData.sharedUserIds.join(', ') : 'なし' }}
+          p 編集可能ユーザーIDリスト: {{ mapData.editorUserIds.length ? mapData.editorUserIds.join(', ') : 'なし' }}
+          v-btn.my-2(
+            v-if="isEditorable"
+            text
+            @click="editMode = true"
+            append-icon="mdi-pencil"
+            style="background-color: rgb(var(--v-theme-primary)); color: white;"
+          ) 編集する
+        .server-info-form(
+          v-if="editMode"
+          style="display: flex; flex-direction: column; gap: 1em;"
+        )
+          v-text-field(
+            v-model="mapData.name"
+            :disabled="mapData.ownerUserId !== myProfile.userId"
+            label="地図の名前"
+            placeholder="例: 東京観光地図"
+            variant="outlined"
+            clearable
+          )
+          v-text-field(
+            v-model="mapData.serverId"
+            :disabled="mapData.ownerUserId !== myProfile.userId"
+            label="地図のID（URLに表示されます）"
+            placeholder="例: tokyo-tourist-map"
+            variant="outlined"
+            clearable
+          )
+          v-textarea(
+            v-model="mapData.description"
+            label="地図の説明"
+            placeholder="例: 東京の観光地をまとめた地図です。"
+            variant="outlined"
+            clearable
+            auto-grow
+            rows="1"
+            max-rows="5"
+          )
+          .for-guest.mb-4
+            v-alert(
+              v-if="myProfile.guest"
+              type="warning"
+              variant="outlined"
+            ) 以下の設定を使用するには、ログインが必要です。
+          v-select(
+            v-model="mapData.isPublic"
+            :disabled="mapData.ownerUserId !== myProfile.userId || myProfile.guest"
+            :items="[{ title: '非公開', value: false },{ title: '公開', value: true }]"
+            label="公開設定"
+            variant="outlined"
+          )
+          v-combobox(
+            v-if="!mapData.isPublic"
+            :disabled="mapData.ownerUserId !== myProfile.userId || myProfile.guest"
+            v-model="mapData.sharedUserIds"
+            label="閲覧可能ユーザーIDリスト（エンター区切り）"
+            placeholder="例: user1,user2,user3"
+            variant="outlined"
+            chips
+            multiple
+            clearable
+          )
+          v-combobox(
+            v-model="mapData.editorUserIds"
+            :disabled="mapData.ownerUserId !== myProfile.userId || myProfile.guest"
+            label="編集可能ユーザーIDリスト（エンター区切り）"
+            placeholder="例: user1,user2,user3"
+            variant="outlined"
+            chips
+            multiple
+            clearable
+          )
+          v-text-field(
+            v-if="settings.developerOptions.enabled"
+            v-model="mapData.icon"
+            label="地図のアイコン画像URL（開発者オプション）"
+            placeholder="例: https://example.com/icon.png"
+            variant="outlined"
+            clearable
+          )
+          v-btn.my-2(
+            v-else
+            text
+            @click="save"
+            append-icon="mdi-content-save"
+            style="background-color: rgb(var(--v-theme-primary)); color: white;"
+          ) 保存
+          hr.my-4
+        v-list.options-list
+          v-list-item.item( @click="share(`https://map.enoki.xyz/map/${mapData.serverId}`, mapData.name)" )
+            .icon-and-text
+              v-icon mdi-share-variant
+              v-list-item-title この地図を共有する
+  //- 編集モードを終了するか確認するダイアログ --
+  v-dialog(
+    v-model="editModeEndDialog"
+    persistent
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") 編集モードを終了しますか？
+      v-card-text
+        .text-content
+          p 編集内容は自動で保存されます。（初回保存を除く）
+          .my-2
+          p 続行するには、以下の「ええで！」を押してください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="editModeEndDialog = false"
+          prepend-icon="mdi-close"
+          ) いやだ！
+        v-btn(
+          style="background-color: rgb(var(--v-theme-primary)); color: white"
+          text
+          @click="editMode = false; editModeEndDialog = false"
+          prepend-icon="mdi-check"
+          ) ええで！
+  //-- 位置情報利用許可ダイアログ --
+  v-dialog(
+    v-model="requestGeoPermissionDialog"
+    persistent
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") 位置情報利用のお願い
+      v-card-text
+        .text-content
+          p このアプリは現在地を表示するために位置情報を利用します。
+          .my-2
+          p 続行するには、以下の「ええで！」を押してください。
+        .privacy-policy-link.mt-4
+          p
+            span 詳細は
+            a.pa-2.ma-2(
+              @click="openURL('https://enoki.xyz/privacy')"
+              style="background-color: rgb(var(--v-theme-primary)); color: white; cursor: pointer; border-radius: 8px;"
+            ) プライバシーポリシー
+            span をご覧ください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="requestGeoPermissionDialog = false; requestBackgroundDialog = true"
+          prepend-icon="mdi-close"
+          ) 嫌だ！
+        v-btn(
+          style="background-color: rgb(var(--v-theme-primary)); color: white"
+          text
+          @click="requestGeoPermission"
+          prepend-icon="mdi-check"
+          ) ええで！
+</template>
+
+<script lang="ts">
+  import { App } from '@capacitor/app'
+  import { Browser } from '@capacitor/browser'
+  import { Geolocation } from '@capacitor/geolocation'
+  import { Share } from '@capacitor/share'
+  import { Toast } from '@capacitor/toast'
+
+  import { LIcon, LMap, LMarker, LTileLayer } from '@vue-leaflet/vue-leaflet'
+  import { Icon, Vue3IconPicker } from 'vue3-icon-picker'
+  import muniArray from '@/js/muni'
+  // @ts-ignore
+  import mixins from '@/mixins/mixins'
+  import { type Map, useMapsStore } from '@/stores/maps'
+  import { useMyProfileStore } from '@/stores/myProfile'
+  import { useSettingsStore } from '@/stores/settings'
+  import 'leaflet/dist/leaflet.css'
+  import 'vue3-icon-picker/dist/style.css'
+
+  export default {
+    components: {
+      LMap,
+      LMarker,
+      LTileLayer,
+      LIcon,
+      Vue3IconPicker,
+      Icon,
+    },
+    mixins: [mixins],
+    data () {
+      return {
+        /** Leafletの設定 */
+        leaflet: {
+          zoom: 13,
+          center: [35.690_430_765_555_42, 139.700_211_526_229_54],
+        },
+        /** 位置情報利用許可ダイアログの表示フラグ */
+        requestGeoPermissionDialog: false,
+        /** 自分の現在地 */
+        myLocation: [0, 0],
+        /** 詳細カードのターゲット */
+        detailCardTarget: null as {} | null,
+        /** 詳細カードに現在の住所を表示 */
+        detailCardTargetAddress: null as string | null,
+        /** 自分のプロフィール */
+        myProfile: useMyProfileStore(),
+        /** 環境変数 */
+        env: null as any,
+        /** 設定ストア */
+        settings: useSettingsStore(),
+        maps: useMapsStore(),
+        /** 編集モード */
+        editMode: false,
+        /** 編集モードを終了するか確認するダイアログの表示フラグ */
+        editModeEndDialog: false,
+        /** オプションダイアログの表示フラグ */
+        optionsDialog: false,
+        /** 地図データ */
+        mapData: {
+          serverId: '',
+          icon: '',
+          isPublic: false,
+          description: '',
+          ownerUserId: '',
+          name: '',
+          points: [],
+          createdAt: undefined,
+          sharedUserIds: [],
+          editorUserIds: [],
+        } as Map,
+        /** 保存ダイアログの表示フラグ */
+        savedDialog: false,
+        /** ルートパラメータ（URLパラメータ） */
+        params: '',
+      }
+    },
+    computed: {
+      isEditorable () {
+        if (this.mapData.ownerUserId === this.myProfile.userId) {
+          return true
+        } else if (this.mapData.ownerUserId === 'guest') {
+          return true
+        } else if (this.mapData.editorUserIds.includes(this.myProfile.userId ?? '')) {
+          return true
+        }
+        return false
+      },
+    },
+    watch: {
+      /** プロフィール詳細を押された時に、現在の住所を表示する */
+      detailCardTarget: {
+        handler: async function (newProfile) {
+          if (!newProfile || !newProfile.location) {
+            this.detailCardTargetAddress = null
+            return
+          } else {
+            const latlng = newProfile.location
+            this.detailCardTargetAddress = await this.getAddress(latlng[0], latlng[1])
+            return
+          }
+        },
+        deep: true,
+        immediate: true,
+      },
+      /** ようこそ画面の表示状態を保存 */
+      optionsDialog: {
+        handler: async function (dialog: boolean) {
+          localStorage.setItem('welcomeDialog', String(dialog))
+        },
+      },
+      /** 編集モードがオフになったときに、詳細カードのターゲットをリセットする */
+      editMode (newEditMode) {
+        this.detailCardTarget = null
+
+        if (!newEditMode && this.params === 'create') {
+          this.$router.back()
+        }
+      },
+    },
+    async mounted () {
+      // @ts-ignore
+      this.env = import.meta.env as any
+
+      /** ルートパラメータ */
+      const params = this.$route.params
+      // @ts-ignore
+      this.params = params['serverId'] as string
+
+      /** ローカルストレージから最後に取得した位置情報を読み込み */
+      const localStorageLatlng = localStorage.getItem('latlng')
+      if (localStorageLatlng) {
+        this.myLocation = JSON.parse(localStorageLatlng)
+        /** バグるので0.1秒待ってから地図の中心を設定 */
+        setTimeout(() => {
+          this.leaflet.center = this.myLocation
+          this.leaflet.zoom = 15
+        }, 100)
+      }
+
+      /** ログイン情報 */
+      if (this.myProfile.$state.guest == false) {
+        if (this.myProfile.lastGetLocationTime) {
+          this.myProfile.lastGetLocationTime = new Date(this.myProfile.lastGetLocationTime)
+        }
+
+        setTimeout(async () => {
+          const token = this.myProfile.userToken
+          const profile: any = await this.getProfile(this.myProfile.userId ?? '')
+          if (profile) {
+            profile.userToken = token
+            profile.battery = this.myProfile.battery
+            profile.guest = false
+            this.myProfile = {
+              ...this.myProfile,
+              ...profile,
+            }
+          }
+        }, 100)
+      } else {
+        this.myProfile.reset()
+      }
+
+      /** 位置情報の許可を確認 */
+      Geolocation.checkPermissions().then(result => {
+        if (result.location === 'granted') {
+          this.setCurrentPosition()
+        } else {
+          Geolocation.requestPermissions().then(result => {
+            if (result.location === 'granted') {
+              this.setCurrentPosition()
+            }
+          }).catch(() => {
+            this.requestGeoPermissionDialog = true
+          })
+        }
+      })
+
+      /** バックボタンのリスナーを追加 */
+      App.addListener('backButton', () => {
+        if (this.requestGeoPermissionDialog) {
+          /** 位置情報利用許可ダイアログは閉じない */
+        } else if (this.optionsDialog) {
+          /** オプションダイアログを閉じる */
+          this.optionsDialog = false
+        } else if (this.detailCardTarget) {
+          /** 詳細カードを閉じる */
+          this.detailCardTarget = null
+        } else if (this.editMode) {
+          /** 編集モードを終了するか確認する */
+          this.editModeEndDialog = true
+        } else {
+          /** 1つ戻る */
+          this.$router.back()
+        }
+      })
+
+      /** 現在地を監視 */
+      Geolocation.watchPosition({
+        enableHighAccuracy: true,
+        timeout: 20_000,
+        interval: 20_000,
+      }, position =>
+        this.watchPosition(position),
+      )
+
+      /** 現在地を取得し、地図の中心も移動 */
+      setTimeout(async () => {
+        await this.setCurrentPosition()
+      }, 1000)
+
+      // 新規作成の場合は、地図データの初期値を設定
+      if (!this.params || this.params === 'create') {
+        this.mapData.name = `${this.myProfile.name ?? 'ゲスト'}の地図（${new Date().toLocaleDateString()}）`
+        this.mapData.ownerUserId = this.myProfile.userId
+        this.mapData.createdAt = Date.now()
+        this.mapData.serverId = `${this.mapData.ownerUserId}-${this.mapData.createdAt}`
+        this.editMode = true
+      } else {
+        // 既存の地図を読み込む
+        const mapData = this.maps.maps.find(map => map.serverId === this.params)
+        if (mapData) {
+          this.mapData = mapData
+        } else {
+          Toast.show({ text: '地図の読み込みに失敗しました。' })
+        }
+      }
+    },
+    unmounted () {
+      App.removeAllListeners()
+    },
+    methods: {
+      onMapClick (event: any) {
+        /** クリックされた場所 */
+        const latlng = event.latlng
+
+        if (!this.editMode) {
+          return
+        }
+        if (this.detailCardTarget) {
+          this.detailCardTarget = null
+          return
+        }
+
+        this.mapData.points.push({
+          latlng: [latlng.lat, latlng.lng],
+          name: `新しい地点${this.mapData.points.length + 1}`,
+          description: undefined,
+          iconImg: undefined,
+          iconMdi: 'MapMarkerAlt',
+          iconColor: undefined,
+          authorUserId: this.myProfile.userId,
+        })
+      },
+      /** 編集内容を保存 */
+      save () {
+        if (!this.isEditorable) {
+          Toast.show({ text: '保存できませんでした。編集権限がありません。' })
+          return
+        } else if (!this.mapData.name) {
+          Toast.show({ text: '地図の名前を入力してください。' })
+          return
+        } else if (!this.mapData.serverId) {
+          Toast.show({ text: '地図のIDを入力してください。' })
+          return
+        }
+        // オフライン保存の場合はそのまま保存してよいが、オンライン保存の場合はサーバーに保存してから保存完了とする
+        // また、オンライン保存の場合はIDの重複を避けるため、IDが重複していないか確認する
+        // 一旦オフラインへ保存し、公開ボタンは別で用意する
+
+        let cnt = 0
+        let found = false
+        for (const map of this.maps.maps) {
+          if (map.serverId === this.mapData.serverId) {
+            // 上書き保存する
+            this.maps.maps[cnt] = this.mapData
+            found = true
+            break
+          }
+          cnt++
+        }
+        if (!found) {
+          // 新規保存する
+          this.maps.maps.push(this.mapData)
+        }
+        Toast.show({ text: '保存しました！' })
+        this.editMode = false
+      },
+      /** 位置情報監視のコールバック */
+      async watchPosition (position: {
+        coords: {
+          [key: string]: any
+        }
+      } | null) {
+        // console.log('最終更新:', new Date(this.lastUpdateMyLocationTime))
+        if (position) {
+          const lat: number = position.coords.latitude
+          const lng: number = position.coords.longitude
+          this.myLocation = [lat, lng]
+        }
+
+        return
+      },
+      /** 現在地を取得し、地図の中心も移動 */
+      async setCurrentPosition () {
+        /** 仮で最後に取得した位置情報を地図の中心に設定 */
+        this.leaflet.center = this.myLocation
+        /** バグるので0.5秒待つ */
+        await new Promise(resolve => setTimeout(resolve, 500))
+        this.leaflet.zoom = 15
+      },
+      /** 位置情報の許可を求める */
+      async requestGeoPermission () {
+        await Geolocation.getCurrentPosition()
+        this.requestGeoPermissionDialog = false
+        return
+      },
+      /** 2地点間の距離（メートル）を計算 */
+      calcDistance (latlng1: [number, number], latlng2: [number, number]) {
+        const R = Math.PI / 180
+        const lat1 = latlng1[0] * R
+        const lat2 = latlng2[0] * R
+        const lng1 = latlng1[1] * R
+        const lng2 = latlng2[1] * R
+        return 6371e3 * Math.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lng2 - lng1)) as number
+      },
+      /** 秒比較 */
+      diffSeconds (date: Date | null | undefined) {
+        if (!date) {
+          return 999_999
+        }
+
+        const now = new Date()
+        /** 差分秒 */
+        const diff = (now.getTime() - date.getTime()) / 1000
+        return diff
+      },
+      openGoogleMaps (latlng: [
+        number, number,
+      ]) {
+        this.openURL(
+          `https://www.google.com/maps/search/?api=1&query=${latlng[0]},${latlng[1]}`,
+        )
+      },
+      /** URLをブラウザで開く */
+      async openURL (url: string) {
+        await Browser.open({ url: url })
+      },
+      /**
+       * 2つのDateオブジェクトの差が10秒以内か判定する
+       * @param {Date} date1 - 比較する1つ目の日付
+       * @param {Date} date2 - 比較する2つ目の日付
+       * @returns {boolean} 10秒以内ならtrue
+       */
+      isWithin10Seconds (date1: Date, date2: Date) {
+        // 10秒 = 10000ミリ秒
+        const diffInMilliseconds = Math.abs(date1.getTime() - date2.getTime())
+        return diffInMilliseconds <= 10_000
+      },
+      /**
+       * 緯度経度から住所を取得
+       * @param lat 緯度
+       * @param lng 経度
+       */
+      async getAddress (lat: number, lng: number) {
+        const geoCodingUrl = new URL(
+          'https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress',
+        )
+        geoCodingUrl.searchParams.set('lat', String(lat))
+        geoCodingUrl.searchParams.set('lon', String(lng))
+        return fetch(geoCodingUrl.toString())
+          .then(res => res.json())
+          .then(json => {
+            const data = json.results
+            const muniData = muniArray[data.muniCd]
+            if (!muniData) {
+              return '住所不明'
+            }
+            const splitedMuniData = muniData.split(',')
+            const pref = splitedMuniData[1]
+            const city = splitedMuniData[3]
+            const address = data.lv01Nm
+            return `${pref}${city}${address}`
+          })
+          .catch(() => {
+            return null
+          })
+      },
+      /** シェアダイアログ */
+      async share (content: string, title = '') {
+        await Share.share({
+          url: content,
+          title: title,
+        })
+      },
+    },
+  }
+</script>
+
+<style lang="scss" scoped>
+.right-bottom-buttons {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + 4em);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+
+  .current-button {
+    background-color: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+.right-top-buttons {
+  position: fixed;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+
+  .account-button {
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+.left-top-buttons {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+
+  .account-button {
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.name-space {
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  -webkit-text-stroke: 2px black;
+  paint-order: stroke;
+  color: white;
+  transition: all 1s;
+}
+
+.action-bar{
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  background-color: rgb(var(--v-theme-surface));
+  z-index: 500;
+  width: 100%;
+  align-items: center;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.3);
+  .buttons{
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-evenly;
+    height: 4em;
+    .button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 6em;
+      border-radius: 1em;
+      height: 80%;
+      cursor: pointer;
+      color: rgb(var(--v-theme-on-surface));
+
+      v-icon {
+        font-size: 24px;
+      }
+
+      p {
+        font-size: 10px;
+        margin: 0;
+        padding: 0;
+      }
+    }
+  }
+  .bottom-android-15-or-higher {
+    width: 100%;
+  }
+}
+
+.bottom-android-15-or-higher {
+  height: 16px;
+}
+.top-android-15-or-higher {
+  height: 40px;
+}
+
+.options-list {
+  .item {
+    padding : 12px 16px;
+    border-radius: 12px!important;
+    margin: 8px 0;
+    cursor: pointer;
+    &:hover {
+      background-color: rgba(var(--v-theme-primary), 0.1);
+    }
+    .icon-and-text {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+      v-icon {
+        font-size: 24px;
+      }
+    }
+  }
+}
+
+.detail-card-target {
+  .info{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1em;
+    margin: 1em 0;
+  }
+}
+
+.opacity05 {
+  opacity: 0.7;
+}
+</style>

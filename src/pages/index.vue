@@ -11,6 +11,26 @@ v-card(
     //- 閲覧権限のある地図のリスト
     p サーバーリスト
     .content
+      p {{ maps.maps.length }}件の地図があります
+      .map-card(
+        v-for="map in maps.maps"
+        :key="map.serverId"
+        @click="$router.push(`/map/${map.serverId}`)"
+        v-ripple
+        style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px;"
+      )
+        .map-icon
+          img(
+            :src="map.icon ?? '/icons/question.png'"
+            style="width: 4em; height: 4em; object-fit: cover;"
+            onerror="this.src='/icons/question.png'"
+          )
+        .map-info
+          p.name-space {{ map.name }}
+          p サーバーID: {{ map.serverId }}
+          p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
+          p {{ map.isPublic ? '公開' : '非公開' }} {{ map.ownerUserId === myProfile.userId ? '（あなたの地図）' : `@${map.ownerUserId}が作成` }}
+          p {{ map.description.length ? map.description : '説明はありません' }}
   //-- 下部のアクションバー --
   .action-bar
     .buttons
@@ -34,7 +54,7 @@ v-card(
       v-btn(
         size="x-large"
         icon
-        @click="$router.push('edit')"
+        @click="$router.push('/map/create')"
         style="background-color: rgb(var(--v-theme-primary)); color: white"
         )
         v-icon mdi-plus
@@ -201,6 +221,7 @@ v-card(
 
   // @ts-ignore
   import mixins from '@/mixins/mixins'
+  import { useMapsStore } from '@/stores/maps'
   import { useMyProfileStore } from '@/stores/myProfile'
   import { useSettingsStore } from '@/stores/settings'
 
@@ -231,6 +252,8 @@ v-card(
         friendList: [] as any[],
         /** 設定ストア */
         settings: useSettingsStore(),
+        /** 地図ストア */
+        maps: useMapsStore(),
       }
     },
     computed: {},
