@@ -9,7 +9,8 @@
         android:theme="@style/AppTheme">
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_location_status" />
+            android:resource="@drawable/ic_location_status"
+        />
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -26,13 +27,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="mapstudio.enoki.xyz" />
-                <data
-                    android:scheme="https"
-                    android:host="np.enoki.xyz"
-                    android:pathPrefix="/user/" />
+                <data android:scheme="https" android:host="mapstudio.enoki.xyz" />
+                <data android:scheme="https" android:host="np.enoki.xyz" android:pathPrefix="/user/" />
             </intent-filter>
 
             <!-- ここからカスタムプロトコル enoki:// の設定 -->
@@ -58,13 +54,11 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location"
-            android:stopWithTask="false" />
+            android:stopWithTask="false"
+        />
 
         <!-- Service Restart Receiver -->
-        <receiver
-            android:name=".ServiceRestartReceiver"
-            android:enabled="true"
-            android:exported="true">
+        <receiver android:name=".ServiceRestartReceiver" android:enabled="true" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="xyz.enoki.mapstudio.ACTION_RESTART_SERVICE" />
@@ -73,7 +67,8 @@
 
         <!-- Trigger Google Play services to install the backported photo picker module. -->
         <!--suppress AndroidDomInspection -->
-        <service android:name="com.google.android.gms.metadata.ModuleDependencies"
+        <service
+            android:name="com.google.android.gms.metadata.ModuleDependencies"
             android:enabled="false"
             android:exported="false"
             tools:ignore="MissingClass">
@@ -99,8 +94,7 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.location.gps" />
-    <uses-feature android:name="android.hardware.camera"
-                  android:required="false" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 </manifest>
