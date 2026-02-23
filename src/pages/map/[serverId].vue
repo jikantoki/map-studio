@@ -553,7 +553,10 @@ div(style="height: 100%; width: 100%")
           style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
         ) サーバーにアップロード
         v-list.options-list
-          v-list-item.item( @click="share(`https://map.enoki.xyz/map/${mapData.serverId}`, mapData.name)" )
+          v-list-item.item(
+            @click="share(`https://map.enoki.xyz/map/${mapData.serverId}`, mapData.name)"
+            v-if="!myProfile.guest"
+            )
             .icon-and-text
               v-icon mdi-share-variant
               v-list-item-title この地図を共有する
