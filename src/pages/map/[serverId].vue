@@ -235,9 +235,9 @@ div(style="height: 100%; width: 100%")
         )
         img(
           loading="lazy"
-          :src="myProfile && myProfile.icon ? myProfile.icon : '/icons/question.png'"
+          :src="myProfile && myProfile.icon ? myProfile.icon : '/icons/map.png'"
           style="height: 4em; width: 4em; border-radius: 9999px; border: solid 2px #000; background-color: white;"
-          onerror="this.src='/icons/question.png'"
+          onerror="this.src='/icons/map.png'"
           )
   //- 編集モードであることを表示
   .edit-mode-indicator.py-2(
@@ -435,9 +435,9 @@ div(style="height: 100%; width: 100%")
         )
           .account-img
             img(
-              :src="mapData.icon ? mapData.icon : '/icons/question.png'"
+              :src="mapData.icon ? mapData.icon : '/icons/map.png'"
               style="height: 8em; width: 8em; border-radius: 9999px; background-color: white; border: solid 2px #000;"
-              onerror="this.src='/icons/question.png'"
+              onerror="this.src='/icons/map.png'"
               )
           .account-info(
             style="text-align: center;"
@@ -936,8 +936,34 @@ div(style="height: 100%; width: 100%")
       /** 全ての線のズームレベルに応じた間隔でのアイコン表示位置 */
       linesIntervalMarkers (): { lineIdx: number, latlng: [number, number] }[] {
         /** アイコンを表示する距離 */
-        // this.leaflet.zoomは整数だが、ズームレベルが1上がるごとに地図上の距離が半分になるので、距離も半分にする（Math関数は重くなるので使わない）
-        const INTERVAL = 1000 * (2 ** (15 - this.leaflet.zoom))
+        let INTERVAL = 1000
+        switch (this.leaflet.zoom) {
+          case 19:
+          case 18: {
+            INTERVAL = 400
+            break
+          }
+          case 17:
+          case 16: {
+            INTERVAL = 800
+            break
+          }
+          case 15:
+          case 14: {
+            INTERVAL = 1600
+            break
+          }
+          case 13:
+          case 12:
+          case 11: {
+            INTERVAL = 3200
+            break
+          }
+          default: {
+            INTERVAL = 1000 * Math.pow(2, 19 - this.leaflet.zoom)
+          }
+        }
+        console.log('Interval for markers:', INTERVAL)
         const result: { lineIdx: number, latlng: [number, number] }[] = []
         for (const [lineIdx, line] of this.mapData.lines.entries()) {
           if (!line.iconMdi && !line.iconImg) continue
