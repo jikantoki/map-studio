@@ -112,6 +112,34 @@ div(style="height: 100%; width: 100%")
       @click="!drawingLine ? detailCardTarget = mapPoint : null"
       @dragend="onPointDragEnd($event, index)"
       )
+    //- 線上の500m毎アイコンマーカー
+    LMarker(
+      v-for="(marker, mIdx) in linesIntervalMarkers"
+      :key="`interval-${marker.lineIdx}-${mIdx}`"
+      :lat-lng="marker.latlng"
+      @click="detailCardTarget = mapData.lines[marker.lineIdx]"
+    )
+      LIcon(
+        :icon-size="[0,0]"
+        style="border: none;"
+        :icon-anchor="[16, 16]"
+      )
+        .icon-wrap(
+          v-if="mapData.lines[marker.lineIdx].iconMdi"
+          style="display: flex; align-items: center; justify-content: center; height: 32px; width: 32px; border-radius: 9999px; background-color: white; border: solid 2px #3388ff;"
+        )
+          Icon(
+            :data="mapData.lines[marker.lineIdx].iconMdi"
+            size="22px"
+            :style="`color: ${mapData.lines[marker.lineIdx].color ?? '#3388ff'}`"
+          )
+        img(
+          v-else-if="mapData.lines[marker.lineIdx].iconImg"
+          loading="lazy"
+          :src="mapData.lines[marker.lineIdx].iconImg"
+          style="height: 32px; width: 32px; border-radius: 9999px; border: solid 2px #3388ff;"
+          onerror="this.src='/icons/question.png'"
+        )
       LIcon(
         :icon-size="[0,0]"
         style="border: none;"
@@ -280,6 +308,9 @@ div(style="height: 100%; width: 100%")
           .info
             v-icon mdi-map-marker
             p {{ detailCardTarget.description ?? '説明なし' }}
+          .info(v-if="detailCardTarget.waypoints")
+            v-icon mdi-map-marker-distance
+            p 総距離: {{ formatDistance(calcLineDistance(detailCardTarget.waypoints.map(w => w.latlng))) }}
           .info
             v-icon mdi-account
             p {{ detailCardTarget.authorUserId ?? '不明なユーザー' }}
@@ -901,6 +932,32 @@ div(style="height: 100%; width: 100%")
       selectedWaypointIsActive () {
         return this.editMode && this.selectedWaypoint !== null
       },
+      /** 全ての線の500m毎アイコン表示位置 */
+      linesIntervalMarkers (): { lineIdx: number, latlng: [number, number] }[] {
+        const INTERVAL = 500
+        const result: { lineIdx: number, latlng: [number, number] }[] = []
+        for (const [lineIdx, line] of this.mapData.lines.entries()) {
+          if (!line.iconMdi && !line.iconImg) continue
+          if (line.waypoints.length < 2) continue
+          const pts = this.catmullRomSpline(line.waypoints.map(w => w.latlng))
+          let accumulated = 0
+          let nextMark = INTERVAL
+          for (let i = 0; i < pts.length - 1; i++) {
+            const segDist = this.calcDistance(pts[i]!, pts[i + 1]!)
+            /** 1区間に複数マークが含まれる場合も処理する */
+            while (accumulated + segDist >= nextMark) {
+              /** 区間内の補間比率でマーク位置を精確に求める */
+              const ratio = (nextMark - accumulated) / segDist
+              const lat = pts[i]![0] + ratio * (pts[i + 1]![0] - pts[i]![0])
+              const lng = pts[i]![1] + ratio * (pts[i + 1]![1] - pts[i]![1])
+              result.push({ lineIdx, latlng: [lat, lng] })
+              nextMark += INTERVAL
+            }
+            accumulated += segDist
+          }
+        }
+        return result
+      },
     },
     watch: {
       /** プロフィール詳細を押された時に、現在の住所を表示する */
@@ -1202,6 +1259,24 @@ div(style="height: 100%; width: 100%")
           this.selectedWaypoint = wp
           this.selectedLine = null
         }
+      },
+      /** 線の総延長距離（メートル）をスプライン上で計算する */
+      calcLineDistance (waypoints: [number, number][]): number {
+        if (waypoints.length < 2) return 0
+        const pts = this.catmullRomSpline(waypoints)
+        let total = 0
+        for (let i = 0; i < pts.length - 1; i++) {
+          total += this.calcDistance(pts[i]!, pts[i + 1]!)
+        }
+        return total
+      },
+      /** 距離をメートルまたはキロメートルの文字列に変換する */
+      formatDistance (meters: number): string {
+        const METERS_PER_KM = 1000
+        if (meters >= METERS_PER_KM) {
+          return `${(meters / METERS_PER_KM).toFixed(2)} km`
+        }
+        return `${Math.round(meters)} m`
       },
       /**
        * Catmull-Romスプライン補間で滑らかな曲線の座標列を生成する
