@@ -255,12 +255,13 @@ div(style="height: 100%; width: 100%")
           onerror="this.src='/icons/map.png'"
           )
   //- 編集モードであることを表示
-  .edit-mode-indicator.py-2(
+  .edit-mode-indicator(
     v-if="editMode && !drawingLine"
-    style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000; width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
     )
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
-    p 編集モード
+    p.py-2(
+      style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000; width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
+    ) 編集モード
   //- 線描画中の案内バナー
   .drawing-line-banner(
     v-if="drawingLine"
