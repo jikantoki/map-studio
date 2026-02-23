@@ -434,6 +434,13 @@ div(style="height: 100%; width: 100%")
           style="background-color: rgb(var(--v-theme-secondary)); color: white; width: 100%;"
         ) ここから線を描画
         v-btn.my-2(
+          v-if="editMode && !detailCardTarget.waypoints"
+          text
+          @click="duplicatePoint"
+          prepend-icon="mdi-content-copy"
+          style="background-color: rgb(var(--v-theme-secondary)); color: white; width: 100%;"
+        ) 複製
+        v-btn.my-2(
           v-if="editMode"
           text
           @click="deletePointDialog = true"
@@ -1119,7 +1126,15 @@ div(style="height: 100%; width: 100%")
         /** 描画中の線 */
         drawingLine: null as { waypoints: Waypoint[] } | null,
         /** 編集中の線 */
+<<<<<<< copilot/add-duplicate-pin-button
+        selectedLine: null as {
+          name: string | undefined
+          waypoints: Waypoint[]
+          color: string | undefined
+          width: number | undefined } | null,
+=======
         selectedLine: null as { name: string | undefined, description: string | undefined, iconImg: string | undefined, iconMdi: string | undefined, waypoints: Waypoint[], color: string | undefined, width: number | undefined, authorUserId: string | undefined } | null,
+>>>>>>> develop
         /** 編集中の線のインデックス */
         selectedLineIndex: -1,
         /** 編集中の経由地点 */
@@ -1128,12 +1143,30 @@ div(style="height: 100%; width: 100%")
         selectedWaypointLineIdx: -1,
         /** 編集中の経由地点のインデックス */
         selectedWaypointWpIdx: -1,
+<<<<<<< copilot/add-duplicate-pin-button
+        /** 最後に操作したピンのスタイル */
+        lastPointStyle: null as {
+          iconMdi: string | undefined
+          iconColor: string | undefined
+          iconDescription: string | undefined
+          iconName: string | undefined
+          iconImg: string | undefined } | null,
+        /** 最後に操作した線のスタイル */
+        lastLineStyle: null as {
+          color: string | undefined
+          iconMdi: string | undefined
+          iconDescription: string | undefined
+          iconName: string | undefined
+          iconImg: string | undefined
+          width: number | undefined } | null,
+=======
         /** 画像アイコン選択ダイアログ表示フラグ */
         iconImgDialog: false,
         /** 画像アイコン選択ダイアログのターゲット */
         iconImgDialogTarget: null as 'point' | 'line' | 'waypoint' | null,
         /** 使用可能なアイコン画像リスト */
         iconImages,
+>>>>>>> develop
       }
     },
     computed: {
@@ -1181,7 +1214,6 @@ div(style="height: 100%; width: 100%")
       linesIntervalMarkers (): { lineIdx: number, latlng: [number, number] }[] {
         /** アイコンを表示する距離 */
         const INTERVAL = 5000
-        console.log('Interval for markers:', INTERVAL)
         const result: { lineIdx: number, latlng: [number, number] }[] = []
         for (const [lineIdx, line] of this.mapData.lines.entries()) {
           if (!line.iconMdi && !line.iconImg) continue
@@ -1209,7 +1241,17 @@ div(style="height: 100%; width: 100%")
     watch: {
       /** プロフィール詳細を押された時に、現在の住所を表示する */
       detailCardTarget: {
-        handler: async function (newProfile) {
+        handler: async function (newProfile, oldProfile) {
+          // 編集モード中にピンの詳細カードが閉じられた時、スタイルを記憶する（waypoints がない = 線ではなくピン）
+          if (!newProfile && oldProfile && this.editMode && !oldProfile.waypoints) {
+            this.lastPointStyle = {
+              iconMdi: oldProfile.iconMdi,
+              iconColor: oldProfile.iconColor,
+              iconImg: oldProfile.iconImg,
+              iconDescription: oldProfile.description,
+              iconName: oldProfile.name,
+            }
+          }
           if (!newProfile || !newProfile.location) {
             this.detailCardTargetAddress = null
             return
@@ -1221,6 +1263,19 @@ div(style="height: 100%; width: 100%")
         },
         deep: true,
         immediate: true,
+      },
+      /** 線の編集が完了した時、スタイルを記憶する */
+      selectedLine (newLine, oldLine) {
+        if (!newLine && oldLine && this.editMode) {
+          this.lastLineStyle = {
+            color: oldLine.color,
+            width: oldLine.width,
+            iconMdi: oldLine.iconMdi,
+            iconImg: oldLine.iconImg,
+            iconDescription: oldLine.description,
+            iconName: oldLine.name,
+          }
+        }
       },
       /** ようこそ画面の表示状態を保存 */
       optionsDialog: {
@@ -1450,11 +1505,11 @@ div(style="height: 100%; width: 100%")
 
         this.mapData.points.push({
           latlng: [latlng.lat, latlng.lng],
-          name: `新しい地点${this.mapData.points.length + 1}`,
-          description: undefined,
-          iconImg: undefined,
-          iconMdi: 'MapMarkerAlt',
-          iconColor: undefined,
+          name: this.lastPointStyle?.iconName ?? `新しい地点${this.mapData.points.length + 1}`,
+          description: this.lastPointStyle?.iconDescription,
+          iconImg: this.lastPointStyle?.iconImg,
+          iconMdi: this.lastPointStyle?.iconMdi ?? this.lastPointStyle?.iconImg ? undefined : 'MapMarkerAlt',
+          iconColor: this.lastPointStyle?.iconColor,
           authorUserId: this.myProfile.userId,
         })
       },
@@ -1536,13 +1591,13 @@ div(style="height: 100%; width: 100%")
           this.mapData.lines = []
         }
         this.mapData.lines.push({
-          name: `線${this.mapData.lines.length + 1}`,
           waypoints: this.drawingLine.waypoints,
-          color: '#3388ff',
-          width: 4,
-          iconImg: undefined,
-          iconMdi: 'OpenInFullOutlined',
-          description: undefined,
+          color: this.lastLineStyle?.color ?? '#3388ff',
+          width: this.lastLineStyle?.width ?? 4,
+          iconImg: this.lastLineStyle?.iconImg,
+          iconMdi: this.lastLineStyle?.iconMdi ?? this.lastLineStyle?.iconImg ? undefined : 'OpenInFullOutlined',
+          description: this.lastLineStyle?.iconDescription,
+          name: this.lastLineStyle?.iconName ?? `線${this.mapData.lines.length + 1}`,
           authorUserId: this.myProfile.userId,
         })
         this.drawingLine = null
@@ -1556,6 +1611,26 @@ div(style="height: 100%; width: 100%")
         this.mapData.points = this.mapData.points.filter(point => point !== this.detailCardTarget)
         this.detailCardTarget = null
         this.deletePointDialog = false
+      },
+      /** ピンを複製する（約100m東にずらして配置） */
+      duplicatePoint () {
+        const METERS_PER_DEGREE_AT_EQUATOR = 111_320
+        const DUPLICATE_OFFSET_METERS = 100
+        const target = this.detailCardTarget as Map['points'][number] | null
+        if (!target) return
+        const lat: number = target.latlng[0]
+        const lng: number = target.latlng[1]
+        const lngOffset = DUPLICATE_OFFSET_METERS / (METERS_PER_DEGREE_AT_EQUATOR * Math.cos(lat * Math.PI / 180))
+        this.mapData.points.push({
+          latlng: [lat, lng + lngOffset],
+          name: target.name,
+          description: target.description,
+          iconImg: target.iconImg,
+          iconMdi: target.iconMdi,
+          iconColor: target.iconColor,
+          authorUserId: this.myProfile.userId,
+        })
+        this.detailCardTarget = null
       },
       /** 確認ダイアログで承認後に線を削除する */
       deleteLine () {
