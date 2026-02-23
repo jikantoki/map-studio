@@ -1347,10 +1347,10 @@ div(style="height: 100%; width: 100%")
 
         this.mapData.points.push({
           latlng: [latlng.lat, latlng.lng],
-          name: `新しい地点${this.mapData.points.length + 1}`,
-          description: undefined,
+          name: this.lastPointStyle?.iconName ?? `新しい地点${this.mapData.points.length + 1}`,
+          description: this.lastPointStyle?.iconDescription,
           iconImg: this.lastPointStyle?.iconImg,
-          iconMdi: this.lastPointStyle?.iconMdi ?? 'MapMarkerAlt',
+          iconMdi: this.lastPointStyle?.iconMdi ?? this.lastPointStyle?.iconImg ? undefined : 'MapMarkerAlt',
           iconColor: this.lastPointStyle?.iconColor,
           authorUserId: this.myProfile.userId,
         })
