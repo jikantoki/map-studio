@@ -1025,7 +1025,11 @@ div(style="height: 100%; width: 100%")
         /** 描画中の線 */
         drawingLine: null as { waypoints: Waypoint[] } | null,
         /** 編集中の線 */
-        selectedLine: null as { name: string | undefined, waypoints: Waypoint[], color: string | undefined, width: number | undefined } | null,
+        selectedLine: null as {
+          name: string | undefined
+          waypoints: Waypoint[]
+          color: string | undefined
+          width: number | undefined } | null,
         /** 編集中の線のインデックス */
         selectedLineIndex: -1,
         /** 編集中の経由地点 */
@@ -1035,9 +1039,14 @@ div(style="height: 100%; width: 100%")
         /** 編集中の経由地点のインデックス */
         selectedWaypointWpIdx: -1,
         /** 最後に操作したピンのスタイル */
-        lastPointStyle: null as { iconMdi: string | undefined, iconColor: string | undefined, iconImg: string | undefined } | null,
+        lastPointStyle: null as {
+          iconMdi: string | undefined
+          iconColor: string | undefined
+          iconImg: string | undefined } | null,
         /** 最後に操作した線のスタイル */
-        lastLineStyle: null as { color: string | undefined, width: number | undefined } | null,
+        lastLineStyle: null as {
+          color: string | undefined
+          width: number | undefined } | null,
       }
     },
     computed: {
