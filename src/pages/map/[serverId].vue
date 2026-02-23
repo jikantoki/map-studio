@@ -638,6 +638,32 @@ div(style="height: 100%; width: 100%")
           @click="deleteLine"
           prepend-icon="mdi-delete"
           ) 削除する
+  //- 経由地点を削除するか確認するダイアログ --
+  v-dialog(
+    v-model="deleteWaypointDialog"
+    persistent
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") この経由地点を削除しますか？
+      v-card-text
+        .text-content
+          p 削除した経由地点は元に戻せません。
+          .my-2
+          p 続行するには、以下の「削除する」を押してください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="deleteWaypointDialog = false"
+          prepend-icon="mdi-close"
+          ) キャンセル
+        v-btn(
+          style="background-color: rgb(var(--v-theme-error)); color: white"
+          text
+          @click="deleteWaypoint"
+          prepend-icon="mdi-delete"
+          ) 削除する
   //- 選択した線の編集カード
   .selected-line-card(v-if="selectedLineCardIsActive")
     v-card(
@@ -760,7 +786,7 @@ div(style="height: 100%; width: 100%")
         v-spacer
         v-btn(
           text
-          @click="selectedWaypoint = null"
+          @click="selectedWaypoint = null; selectedWaypointLineIdx = -1; selectedWaypointWpIdx = -1"
           icon="mdi-check"
           )
       v-card-text
@@ -826,7 +852,13 @@ div(style="height: 100%; width: 100%")
             )
         v-btn.my-2(
           text
-          @click="selectedWaypoint = null"
+          @click="deleteWaypointDialog = true"
+          prepend-icon="mdi-delete"
+          style="background-color: rgb(var(--v-theme-error)); width: 100%;"
+        ) 削除
+        v-btn.my-2(
+          text
+          @click="selectedWaypoint = null; selectedWaypointLineIdx = -1; selectedWaypointWpIdx = -1"
           prepend-icon="mdi-check"
           style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
         ) 閉じる
@@ -935,6 +967,8 @@ div(style="height: 100%; width: 100%")
         deletePointDialog: false,
         /** 線を削除するか確認するダイアログの表示フラグ */
         deleteLineDialog: false,
+        /** 経由地点を削除するか確認するダイアログの表示フラグ */
+        deleteWaypointDialog: false,
         /** オプションダイアログの表示フラグ */
         optionsDialog: false,
         /** 地図データ */
@@ -963,6 +997,10 @@ div(style="height: 100%; width: 100%")
         selectedLineIndex: -1,
         /** 編集中の経由地点 */
         selectedWaypoint: null as Waypoint | null,
+        /** 編集中の経由地点が属する線のインデックス */
+        selectedWaypointLineIdx: -1,
+        /** 編集中の経由地点のインデックス */
+        selectedWaypointWpIdx: -1,
       }
     },
     computed: {
@@ -1122,6 +1160,8 @@ div(style="height: 100%; width: 100%")
           /** 点削除確認ダイアログは閉じない */
         } else if (this.deleteLineDialog) {
           /** 線削除確認ダイアログは閉じない */
+        } else if (this.deleteWaypointDialog) {
+          /** 経由地点削除確認ダイアログは閉じない */
         } else if (this.optionsDialog) {
           /** オプションダイアログを閉じる */
           this.optionsDialog = false
@@ -1131,6 +1171,8 @@ div(style="height: 100%; width: 100%")
         } else if (this.selectedWaypoint) {
           /** 経由地点編集カードを閉じる */
           this.selectedWaypoint = null
+          this.selectedWaypointLineIdx = -1
+          this.selectedWaypointWpIdx = -1
         } else if (this.detailCardTarget) {
           /** 詳細カードを閉じる */
           this.detailCardTarget = null
@@ -1331,11 +1373,26 @@ div(style="height: 100%; width: 100%")
         this.selectedLineIndex = -1
         this.deleteLineDialog = false
       },
+      /** 確認ダイアログで承認後に経由地点を削除する */
+      deleteWaypoint () {
+        const line = this.selectedWaypointLineIdx >= 0
+          ? this.mapData.lines[this.selectedWaypointLineIdx]
+          : undefined
+        if (line && this.selectedWaypointWpIdx >= 0 && this.selectedWaypointWpIdx < line.waypoints.length) {
+          line.waypoints.splice(this.selectedWaypointWpIdx, 1)
+        }
+        this.selectedWaypoint = null
+        this.selectedWaypointLineIdx = -1
+        this.selectedWaypointWpIdx = -1
+        this.deleteWaypointDialog = false
+      },
       /** 経由地点の編集カードを開く */
       openWaypointEditor (lineIdx: number, wpIdx: number) {
         const wp = this.mapData.lines[lineIdx]?.waypoints[wpIdx]
         if (wp) {
           this.selectedWaypoint = wp
+          this.selectedWaypointLineIdx = lineIdx
+          this.selectedWaypointWpIdx = wpIdx
           this.selectedLine = null
         }
       },
