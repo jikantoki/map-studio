@@ -936,33 +936,7 @@ div(style="height: 100%; width: 100%")
       /** 全ての線のズームレベルに応じた間隔でのアイコン表示位置 */
       linesIntervalMarkers (): { lineIdx: number, latlng: [number, number] }[] {
         /** アイコンを表示する距離 */
-        let INTERVAL = 1000
-        switch (this.leaflet.zoom) {
-          case 19:
-          case 18: {
-            INTERVAL = 400
-            break
-          }
-          case 17:
-          case 16: {
-            INTERVAL = 800
-            break
-          }
-          case 15:
-          case 14: {
-            INTERVAL = 1600
-            break
-          }
-          case 13:
-          case 12:
-          case 11: {
-            INTERVAL = 3200
-            break
-          }
-          default: {
-            INTERVAL = 1000 * Math.pow(2, 19 - this.leaflet.zoom)
-          }
-        }
+        const INTERVAL = 5000
         console.log('Interval for markers:', INTERVAL)
         const result: { lineIdx: number, latlng: [number, number] }[] = []
         for (const [lineIdx, line] of this.mapData.lines.entries()) {
