@@ -21,9 +21,9 @@ v-card(
       )
         .map-icon
           img(
-            :src="map.icon ?? '/icons/question.png'"
-            style="width: 4em; height: 4em; object-fit: cover;"
-            onerror="this.src='/icons/question.png'"
+            :src="map.icon ?? '/icons/map.png'"
+            style="width: 4em; height: 4em; object-fit: cover; border-radius: 12px; background-color: white;"
+            onerror="this.src='/icons/map.png'"
           )
         .map-info
           p.name-space {{ map.name }}
