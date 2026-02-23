@@ -66,7 +66,8 @@ div(style="height: 100%; width: 100%")
                 v-if="wp.waypoint.iconMdi"
                 :data="wp.waypoint.iconMdi"
                 size="24px"
-                :style="`color: ${wp.waypoint.iconColor ? wp.waypoint.iconColor : 'rgb(var(--v-theme-primary))'}; width: 32px; height: 32px; transform: translate(3px, 3px);`"
+                :color="wp.waypoint.iconColor ? wp.waypoint.iconColor : 'rgb(var(--v-theme-primary))'"
+                style="width: 32px; height: 32px; transform: translate(3px, 3px);"
                 )
             img(
               v-else-if="wp.waypoint.iconImg"
@@ -140,7 +141,8 @@ div(style="height: 100%; width: 100%")
               v-if="mapPoint.iconMdi"
               :data="mapPoint.iconMdi"
               size="24px"
-              :style="`color: ${mapPoint.iconColor ? mapPoint.iconColor : 'rgb(var(--v-theme-primary))'}; width: 32px; height: 32px; transform: translate(3px, 3px);`"
+              :color="mapPoint.iconColor ? mapPoint.iconColor : 'rgb(var(--v-theme-primary))'"
+              style="width: 32px; height: 32px; transform: translate(3px, 3px);"
               )
           img(
             v-else-if="mapPoint.iconImg"
@@ -171,9 +173,10 @@ div(style="height: 100%; width: 100%")
             )
               Icon(
                 :data="mapData.lines[marker.lineIdx].iconMdi"
-                size="22px"
-                :style="`color: ${mapData.lines[marker.lineIdx].color ?? '#3388ff'}`"
-              )
+                size="24px"
+                :color="mapData.lines[marker.lineIdx].iconColor ? mapData.lines[marker.lineIdx].iconColor : 'rgb(var(--v-theme-primary))'"
+                style="width: 32px; height: 32px; transform: translate(3px, 3px);"
+                )
             img(
               v-else-if="mapData.lines[marker.lineIdx] && mapData.lines[marker.lineIdx].iconImg"
               loading="lazy"
@@ -301,8 +304,9 @@ div(style="height: 100%; width: 100%")
           )
             Icon(
               :data="detailCardTarget.iconMdi"
-              size="1.3em"
-              :style="`color: ${detailCardTarget.iconColor ? detailCardTarget.iconColor : 'rgb(var(--v-theme-primary))'}`"
+              size="24px"
+              :color="detailCardTarget.iconColor ? detailCardTarget.iconColor : 'rgb(var(--v-theme-primary))'"
+              style="width: 32px; height: 32px; transform: translate(3px, 3px);"
               )
           img.mr-2(
             v-else-if="detailCardTarget.iconImg"
@@ -344,7 +348,6 @@ div(style="height: 100%; width: 100%")
             .icon-settings(
               style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
             )
-              p アイコンを設定
               v-select(
                 :model-value="detailCardTarget.iconImg ? 'img' : 'svg'"
                 @update:model-value="onPointIconTypeChange"
@@ -364,7 +367,7 @@ div(style="height: 100%; width: 100%")
                   selectedIconColor="white"
                   inputSize="large"
                   valueType="name"
-                  iconLibrary="material"
+                  iconLibrary="all"
                 )
                 p アイコン名: {{ detailCardTarget.iconMdi }}
               template(v-else)
@@ -723,8 +726,9 @@ div(style="height: 100%; width: 100%")
           )
             Icon(
               :data="selectedLine.iconMdi"
-              size="1.3em"
-              :style="`color: ${selectedLine.color ?? 'rgb(var(--v-theme-primary))'}`"
+              size="24px"
+              :color="selectedLine.iconColor ? selectedLine.iconColor : 'rgb(var(--v-theme-primary))'"
+              style="width: 32px; height: 32px; transform: translate(3px, 3px);"
               )
           img.mr-2(
             v-else-if="selectedLine.iconImg"
@@ -752,7 +756,6 @@ div(style="height: 100%; width: 100%")
             .icon-settings(
               style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
             )
-              p アイコンを設定
               v-select(
                 :model-value="selectedLine.iconImg ? 'img' : 'svg'"
                 @update:model-value="onLineIconTypeChange"
@@ -772,7 +775,7 @@ div(style="height: 100%; width: 100%")
                   selectedIconColor="white"
                   inputSize="large"
                   valueType="name"
-                  iconLibrary="material"
+                  iconLibrary="all"
                 )
                 p アイコン名: {{ selectedLine.iconMdi }}
               template(v-else)
@@ -872,7 +875,6 @@ div(style="height: 100%; width: 100%")
             .icon-settings(
               style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
             )
-              p アイコンを設定
               v-select(
                 :model-value="selectedWaypoint.iconImg ? 'img' : 'svg'"
                 @update:model-value="onWaypointIconTypeChange"
@@ -892,7 +894,7 @@ div(style="height: 100%; width: 100%")
                   selectedIconColor="white"
                   inputSize="large"
                   valueType="name"
-                  iconLibrary="material"
+                  iconLibrary="all"
                 )
                 p アイコン名: {{ selectedWaypoint.iconMdi }}
               template(v-else)
