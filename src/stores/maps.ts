@@ -37,6 +37,12 @@ export type Map = {
   lines: {
     /** 線の名前 */
     name: string | undefined
+    /** 線の説明 */
+    description: string | undefined
+    /** 線のアイコン画像URL */
+    iconImg: string | undefined
+    /** 線のアイコンMdi */
+    iconMdi: string | undefined
     /** 経由地点リスト */
     waypoints: {
       /** 経由地点の名前 */
@@ -56,6 +62,8 @@ export type Map = {
     color: string | undefined
     /** 線の太さ */
     width: number | undefined
+    /** 追加・編集した人のユーザーID */
+    authorUserId: string | undefined
   }[]
   /** 閲覧可能ユーザーIDリスト（isPublicがtrueの場合に有効） */
   sharedUserIds: string[]

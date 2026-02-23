@@ -40,15 +40,15 @@ div(style="height: 100%; width: 100%")
       :lat-lngs="catmullRomSpline(line.waypoints.map(w => w.latlng))"
       :color="line.color ?? '#3388ff'"
       :weight="line.width ?? 4"
-      @click="editMode ? (selectedLine = line, selectedLineIndex = lineIndex) : null"
+      @click="editMode ? (selectedLine = line, selectedLineIndex = lineIndex) : detailCardTarget = line"
     )
     //- 編集モード時の経由地点マーカー
-    template(v-if="editMode")
+    template
       LMarker(
         v-for="(wp, wpIdx) in linesWaypointsFlat"
         :key="`wp-${wp.lineIdx}-${wp.wpIdx}`"
         :lat-lng="wp.latlng"
-        @click.stop="openWaypointEditor(wp.lineIdx, wp.wpIdx)"
+        @click="editMode ? openWaypointEditor(wp.lineIdx, wp.wpIdx) : detailCardTarget = wp.waypoint"
       )
         LIcon(
           :icon-size="[0,0]"
@@ -58,17 +58,27 @@ div(style="height: 100%; width: 100%")
           div(style="display: flex; align-items: center; width: auto;")
             .icon-wrap(
               v-if="wp.waypoint.iconMdi"
-              style="display: flex; align-items: center; justify-content: center; height: 24px; width: 24px; border-radius: 9999px; background-color: white; border: solid 2px #3388ff;"
+              style="display: flex; align-items: center; justify-content: center; height: 32px; width: 32px; border-radius: 9999px; background-color: white; border: solid 1px #000;"
             )
               Icon(
+                v-if="wp.waypoint.iconMdi"
                 :data="wp.waypoint.iconMdi"
-                size="16px"
-                :style="`color: ${wp.waypoint.iconColor ? wp.waypoint.iconColor : '#3388ff'}`"
+                size="24px"
+                :style="`color: ${wp.waypoint.iconColor ? wp.waypoint.iconColor : 'rgb(var(--v-theme-primary))'}; width: 32px; height: 32px; transform: translate(3px, 3px);`"
+                )
+            img(
+              v-else-if="wp.waypoint.iconImg"
+              loading="lazy"
+              :src="wp.waypoint.iconImg ?? '/icons/question.png'"
+              style="height: 32px; width: 32px;"
+              onerror="this.src='/icons/question.png'"
               )
-            .wp-dot(
-              v-else
-              style="height: 14px; width: 14px; border-radius: 9999px; background-color: white; border: solid 3px #3388ff;"
-            )
+            p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0; width: 0; overflow: hidden;'")
+              span {{ wp.waypoint.name }}
+              .wp-dot(
+                v-if="!wp.waypoint.iconMdi && !wp.waypoint.iconImg && editMode"
+                style="height: 24px; width: 24px; border-radius: 9999px; background-color: white; border: solid 3px #3388ff;"
+              )
     //- 描画中の線
     LPolyline(
       v-if="drawingLine && drawingLine.waypoints.length >= 2"
@@ -89,6 +99,7 @@ div(style="height: 100%; width: 100%")
         :icon-anchor="[7, 7]"
       )
         .wp-dot(style="height: 14px; width: 14px; border-radius: 9999px; background-color: white; border: solid 3px #ff4444;")
+    //- 描画済みのポイント
     LMarker(
       v-for="(mapPoint, index) in mapData.points"
       :key="index"
@@ -118,7 +129,7 @@ div(style="height: 100%; width: 100%")
             style="height: 32px; width: 32px;"
             onerror="this.src='/icons/question.png'"
             )
-          p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0;'")
+          p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0; width: 0; overflow: hidden;'")
             span {{ mapPoint.name }}
   //-- 下部のアクションバー --
   .action-bar
@@ -223,14 +234,14 @@ div(style="height: 100%; width: 100%")
       prepend-icon="mdi-check"
       style="background-color: rgb(var(--v-theme-primary)); color: white;"
     ) 完了
-  //- 地図で押したアカウントの詳細カード
+  //- 地図で押したポイントの詳細カード
   .detail-card-target
     v-card(
       v-if="detailCardTarget"
       style="position: fixed; bottom: 0; left: 0; z-index: 1000; width: 100%; border-radius: 16px 16px 0 0;"
     )
       v-card-actions
-        p.ml-2(
+        .ml-2(
           style="display: flex; align-items: center;"
         )
           .icon-wrap.mr-2(
@@ -249,7 +260,7 @@ div(style="height: 100%; width: 100%")
             style="height: 1.5em; width: 1.5em; border-radius: 9999px;"
             onerror="this.src='/icons/question.png'"
             )
-          span {{ editMode ? `${detailCardTarget.name}を編集` : detailCardTarget.name }}
+          span {{ editMode ? `${detailCardTarget.name}を編集` : detailCardTarget.name ?? '無題' }}
         v-spacer
         v-btn(
           text
@@ -257,11 +268,15 @@ div(style="height: 100%; width: 100%")
           icon="mdi-close"
           )
       v-card-text
-        .info(
+        .infos(
           v-if="!editMode"
         )
-          v-icon mdi-map-marker
-          p {{ detailCardTarget.description ? detailCardTarget.description : '説明なし' }}
+          .info
+            v-icon mdi-map-marker
+            p {{ detailCardTarget.description ?? '説明なし' }}
+          .info
+            v-icon mdi-account
+            p {{ detailCardTarget.authorUserId ?? '不明なユーザー' }}
         .edit-form(
           v-else
         )
@@ -269,7 +284,7 @@ div(style="height: 100%; width: 100%")
             v-icon mdi-map-marker
             p
               span 登録者:
-              b.ml-2 {{ detailCardTarget.authorUserId ? `@${detailCardTarget.authorUserId}` : '不明' }}
+              b.ml-2 {{ detailCardTarget.authorUserId ? `@${detailCardTarget.authorUserId}` : '不明なユーザー' }}
           .info
             v-icon mdi-image
             .icon-settings(
@@ -330,7 +345,7 @@ div(style="height: 100%; width: 100%")
               max-rows="5"
             )
         v-btn.my-2(
-          v-if="!editMode"
+          v-if="!editMode && !detailCardTarget.waypoints"
           text
           @click="openGoogleMaps(detailCardTarget.location)"
           prepend-icon="mdi-map-marker"
@@ -354,7 +369,7 @@ div(style="height: 100%; width: 100%")
           v-if="editMode"
           text
           @click="detailCardTarget = null"
-          prepend-icon="mdi-close"
+          prepend-icon="mdi-check"
           style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
         ) 閉じる
         .my-4
@@ -531,13 +546,30 @@ div(style="height: 100%; width: 100%")
           prepend-icon="mdi-check"
           ) ええで！
   //- 選択した線の編集カード
-  .selected-line-card(v-if="selectedLine && editMode && !selectedWaypoint")
+  .selected-line-card(v-if="selectedLineCardIsActive")
     v-card(
       style="position: fixed; bottom: 0; left: 0; z-index: 1000; width: 100%; border-radius: 16px 16px 0 0;"
     )
       v-card-actions
-        p.ml-2(style="display: flex; align-items: center;")
-          v-icon.mr-2 mdi-vector-line
+        .ml-2(
+          style="display: flex; align-items: center;"
+        )
+          .icon-wrap.mr-2(
+            v-if="selectedLine.iconMdi"
+            style="display: flex; align-items: center; justify-content: center; height: 2em; width: 2em; border-radius: 9999px; background-color: white; border: solid 1px #000;"
+          )
+            Icon(
+              :data="selectedLine.iconMdi"
+              size="1.3em"
+              :style="`color: ${selectedLine.color ?? 'rgb(var(--v-theme-primary))'}`"
+              )
+          img.mr-2(
+            v-else-if="selectedLine.iconImg"
+            loading="lazy"
+            :src="selectedLine.iconImg && selectedLine.iconImg.length ? selectedLine.iconImg : '/icons/question.png'"
+            style="height: 1.5em; width: 1.5em; border-radius: 9999px;"
+            onerror="this.src='/icons/question.png'"
+            )
           span {{ selectedLine.name ? selectedLine.name : '線' }}を編集
         v-spacer
         v-btn(
@@ -546,34 +578,70 @@ div(style="height: 100%; width: 100%")
           icon="mdi-close"
           )
       v-card-text
-        .info
-          v-icon mdi-tag
-          v-text-field(
-            v-model="selectedLine.name"
-            label="名前"
-            placeholder="例: ルート1"
-            variant="outlined"
-            style="flex: 1;"
-            clearable
-          )
-        .info.mt-2
-          v-icon mdi-palette
-          v-btn(
-            :style="`background-color: ${selectedLine.color ? selectedLine.color : '#3388ff'}; color: white;`"
-          ) 色を選択
-            v-menu(
-              activator="parent"
-              location="bottom"
+        .edit-form.detail-card-target
+          .info
+            v-icon mdi-account
+            p
+              span 登録者:
+              b.ml-2 {{ selectedLine.authorUserId ? `@${selectedLine.authorUserId}` : '不明なユーザー' }}
+          .info
+            v-icon mdi-image
+            .icon-settings(
+              style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
             )
-              v-color-picker(
-                v-model="selectedLine.color"
-                show-swatches
-                hide-canvas
-                hide-inputs
-                hide-mode-switch
-                mode="hexa"
-                @click.stop
+              p アイコンを設定
+              Vue3IconPicker(
+                v-model="selectedLine.iconMdi"
+                searchPlaceholder="アイコン名で検索…"
+                placeholder="アイコンを選択"
+                :theme="$vuetify.theme.global.name"
+                selectedIconBgColor="rgb(var(--v-theme-primary))"
+                selectedIconColor="white"
+                inputSize="large"
+                valueType="name"
+                iconLibrary="material"
               )
+              p アイコン名: {{ selectedLine.iconMdi }}
+          .info
+            v-icon mdi-tag
+            v-text-field(
+              v-model="selectedLine.name"
+              label="名前"
+              placeholder="例: ルート1"
+              variant="outlined"
+              style="flex: 1;"
+              clearable
+            )
+          .info
+            v-icon mdi-text-box-edit-outline
+            v-textarea(
+              v-model="selectedLine.description"
+              label="説明"
+              placeholder="例: ルート1の説明"
+              variant="outlined"
+              style="flex: 1;"
+              auto-grow
+              rows="1"
+              clearable
+            )
+          .info.my-2
+            v-icon mdi-palette
+            v-btn(
+              :style="`background-color: ${selectedLine.color ? selectedLine.color : '#3388ff'}; color: white;`"
+            ) 色を選択
+              v-menu(
+                activator="parent"
+                location="bottom"
+              )
+                v-color-picker(
+                  v-model="selectedLine.color"
+                  show-swatches
+                  hide-canvas
+                  hide-inputs
+                  hide-mode-switch
+                  mode="hexa"
+                  @click.stop
+                )
         v-btn.my-2(
           text
           @click="mapData.lines.splice(selectedLineIndex, 1); selectedLine = null; selectedLineIndex = -1"
@@ -583,89 +651,90 @@ div(style="height: 100%; width: 100%")
         v-btn.my-2(
           text
           @click="selectedLine = null; selectedLineIndex = -1"
-          prepend-icon="mdi-close"
+          prepend-icon="mdi-check"
           style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
         ) 閉じる
         .my-4
   //- 選択した経由地点の編集カード
-  .selected-waypoint-card(v-if="selectedWaypoint && editMode")
+  .selected-waypoint-card(v-if="selectedWaypointIsActive")
     v-card(
       style="position: fixed; bottom: 0; left: 0; z-index: 1001; width: 100%; border-radius: 16px 16px 0 0;"
     )
       v-card-actions
         p.ml-2(style="display: flex; align-items: center;")
           v-icon.mr-2 mdi-map-marker-path
-          span 経由地点を編集
+          span {{ selectedWaypoint.name ? selectedWaypoint.name : '経由地点' }}を編集
         v-spacer
         v-btn(
           text
           @click="selectedWaypoint = null"
-          icon="mdi-close"
+          icon="mdi-check"
           )
       v-card-text
-        .info
-          v-icon mdi-image
-          .icon-settings(
-            style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
-          )
-            p アイコンを設定
-            Vue3IconPicker(
-              v-model="selectedWaypoint.iconMdi"
-              searchPlaceholder="アイコン名で検索…"
-              placeholder="アイコンを選択"
-              :theme="$vuetify.theme.global.name"
-              selectedIconBgColor="rgb(var(--v-theme-primary))"
-              selectedIconColor="white"
-              inputSize="large"
-              valueType="name"
-              iconLibrary="material"
+        .edit-form.detail-card-target
+          .info
+            v-icon mdi-image
+            .icon-settings(
+              style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
             )
-            p アイコン名: {{ selectedWaypoint.iconMdi }}
-        .info.mt-4.mb-6
-          v-icon mdi-palette
-          v-btn(
-            :style="`background-color: ${selectedWaypoint.iconColor ? selectedWaypoint.iconColor : 'rgb(var(--v-theme-primary))'}; color: white;`"
-          ) 色を選択
-            v-menu(
-              activator="parent"
-              location="bottom"
-            )
-              v-color-picker(
-                v-model="selectedWaypoint.iconColor"
-                show-swatches
-                hide-canvas
-                hide-inputs
-                hide-mode-switch
-                mode="hexa"
-                @click.stop
+              p アイコンを設定
+              Vue3IconPicker(
+                v-model="selectedWaypoint.iconMdi"
+                searchPlaceholder="アイコン名で検索…"
+                placeholder="アイコンを選択"
+                :theme="$vuetify.theme.global.name"
+                selectedIconBgColor="rgb(var(--v-theme-primary))"
+                selectedIconColor="white"
+                inputSize="large"
+                valueType="name"
+                iconLibrary="material"
               )
-        .info
-          v-icon mdi-tag
-          v-text-field(
-            v-model="selectedWaypoint.name"
-            label="名前"
-            placeholder="例: 休憩ポイント"
-            variant="outlined"
-            style="flex: 1;"
-            clearable
-          )
-        .info
-          v-icon mdi-text-box-edit-outline
-          v-textarea(
-            v-model="selectedWaypoint.description"
-            label="説明"
-            placeholder="例: 公園の入口"
-            variant="outlined"
-            style="flex: 1;"
-            clearable
-            auto-grow
-            rows="1"
-            max-rows="5"
-          )
+              p アイコン名: {{ selectedWaypoint.iconMdi }}
+          .info.mt-4.mb-6
+            v-icon mdi-palette
+            v-btn(
+              :style="`background-color: ${selectedWaypoint.iconColor ? selectedWaypoint.iconColor : 'rgb(var(--v-theme-primary))'}; color: white;`"
+            ) 色を選択
+              v-menu(
+                activator="parent"
+                location="bottom"
+              )
+                v-color-picker(
+                  v-model="selectedWaypoint.iconColor"
+                  show-swatches
+                  hide-canvas
+                  hide-inputs
+                  hide-mode-switch
+                  mode="hexa"
+                  @click.stop
+                )
+          .info
+            v-icon mdi-tag
+            v-text-field(
+              v-model="selectedWaypoint.name"
+              label="名前"
+              placeholder="例: 休憩ポイント"
+              variant="outlined"
+              style="flex: 1;"
+              clearable
+            )
+          .info
+            v-icon mdi-text-box-edit-outline
+            v-textarea(
+              v-model="selectedWaypoint.description"
+              label="説明"
+              placeholder="例: 公園の入口"
+              variant="outlined"
+              style="flex: 1;"
+              clearable
+              auto-grow
+              rows="1"
+              max-rows="5"
+            )
         v-btn.my-2(
           text
           @click="selectedWaypoint = null"
-          prepend-icon="mdi-close"
+          prepend-icon="mdi-check"
           style="background-color: rgb(var(--v-theme-primary)); width: 100%;"
         ) 閉じる
         .my-4
@@ -819,6 +888,12 @@ div(style="height: 100%; width: 100%")
           }
         }
         return result
+      },
+      selectedLineCardIsActive () {
+        return this.editMode && this.selectedWaypoint === null && this.selectedLine !== null
+      },
+      selectedWaypointIsActive () {
+        return this.editMode && this.selectedWaypoint !== null
       },
     },
     watch: {
@@ -989,6 +1064,9 @@ div(style="height: 100%; width: 100%")
         if (!this.editMode) {
           return
         }
+        if (this.selectedLineCardIsActive) {
+          return
+        }
 
         /** 線描画モード中は経由地点を追加 */
         if (this.drawingLine) {
@@ -1074,10 +1152,14 @@ div(style="height: 100%; width: 100%")
           this.mapData.lines = []
         }
         this.mapData.lines.push({
-          name: `線${new Date().toLocaleTimeString()}`,
+          name: `線${this.mapData.lines.length + 1}`,
           waypoints: this.drawingLine.waypoints,
           color: '#3388ff',
           width: 4,
+          iconImg: undefined,
+          iconMdi: 'OpenInFullOutlined',
+          description: undefined,
+          authorUserId: this.myProfile.userId,
         })
         this.drawingLine = null
       },
