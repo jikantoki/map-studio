@@ -1034,6 +1034,10 @@ div(style="height: 100%; width: 100%")
         selectedWaypointLineIdx: -1,
         /** 編集中の経由地点のインデックス */
         selectedWaypointWpIdx: -1,
+        /** 最後に操作したピンのスタイル */
+        lastPointStyle: null as { iconMdi: string | undefined, iconColor: string | undefined, iconImg: string | undefined } | null,
+        /** 最後に操作した線のスタイル */
+        lastLineStyle: null as { color: string | undefined, width: number | undefined } | null,
       }
     },
     computed: {
@@ -1109,7 +1113,15 @@ div(style="height: 100%; width: 100%")
     watch: {
       /** プロフィール詳細を押された時に、現在の住所を表示する */
       detailCardTarget: {
-        handler: async function (newProfile) {
+        handler: async function (newProfile, oldProfile) {
+          // 編集モード中にピンの詳細カードが閉じられた時、スタイルを記憶する（waypoints がない = 線ではなくピン）
+          if (!newProfile && oldProfile && this.editMode && !oldProfile.waypoints) {
+            this.lastPointStyle = {
+              iconMdi: oldProfile.iconMdi,
+              iconColor: oldProfile.iconColor,
+              iconImg: oldProfile.iconImg,
+            }
+          }
           if (!newProfile || !newProfile.location) {
             this.detailCardTargetAddress = null
             return
@@ -1121,6 +1133,15 @@ div(style="height: 100%; width: 100%")
         },
         deep: true,
         immediate: true,
+      },
+      /** 線の編集が完了した時、スタイルを記憶する */
+      selectedLine (newLine, oldLine) {
+        if (!newLine && oldLine && this.editMode) {
+          this.lastLineStyle = {
+            color: oldLine.color,
+            width: oldLine.width,
+          }
+        }
       },
       /** ようこそ画面の表示状態を保存 */
       optionsDialog: {
@@ -1308,9 +1329,9 @@ div(style="height: 100%; width: 100%")
           latlng: [latlng.lat, latlng.lng],
           name: `新しい地点${this.mapData.points.length + 1}`,
           description: undefined,
-          iconImg: undefined,
-          iconMdi: 'MapMarkerAlt',
-          iconColor: undefined,
+          iconImg: this.lastPointStyle?.iconImg,
+          iconMdi: this.lastPointStyle?.iconMdi ?? 'MapMarkerAlt',
+          iconColor: this.lastPointStyle?.iconColor,
           authorUserId: this.myProfile.userId,
         })
       },
@@ -1394,8 +1415,8 @@ div(style="height: 100%; width: 100%")
         this.mapData.lines.push({
           name: `線${this.mapData.lines.length + 1}`,
           waypoints: this.drawingLine.waypoints,
-          color: '#3388ff',
-          width: 4,
+          color: this.lastLineStyle?.color ?? '#3388ff',
+          width: this.lastLineStyle?.width ?? 4,
           iconImg: undefined,
           iconMdi: 'OpenInFullOutlined',
           description: undefined,
