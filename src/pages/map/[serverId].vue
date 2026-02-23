@@ -1066,7 +1066,16 @@ div(style="height: 100%; width: 100%")
         /** 自分の現在地 */
         myLocation: [0, 0],
         /** 詳細カードのターゲット */
-        detailCardTarget: null as { iconMdi: string | undefined; iconImg: string | undefined; iconColor: string | undefined; name: string | undefined; description: string | undefined; authorUserId: string | undefined; waypoints?: { latlng: [number, number] }[]; location?: string } | null,
+        detailCardTarget: null as {
+          iconMdi: string | undefined
+          iconImg: string | undefined
+          iconColor: string | undefined
+          name: string | undefined
+          description: string | undefined
+          authorUserId: string | undefined
+          waypoints?: { latlng: [number, number] }[]
+          location?: string
+        } | null,
         /** 詳細カードに現在の住所を表示 */
         detailCardTargetAddress: null as string | null,
         /** 自分のプロフィール */
