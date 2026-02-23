@@ -1118,6 +1118,10 @@ div(style="height: 100%; width: 100%")
       App.addListener('backButton', () => {
         if (this.requestGeoPermissionDialog) {
           /** 位置情報利用許可ダイアログは閉じない */
+        } else if (this.deletePointDialog) {
+          /** 点削除確認ダイアログは閉じない */
+        } else if (this.deleteLineDialog) {
+          /** 線削除確認ダイアログは閉じない */
         } else if (this.optionsDialog) {
           /** オプションダイアログを閉じる */
           this.optionsDialog = false
