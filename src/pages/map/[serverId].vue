@@ -1126,15 +1126,15 @@ div(style="height: 100%; width: 100%")
         /** 描画中の線 */
         drawingLine: null as { waypoints: Waypoint[] } | null,
         /** 編集中の線 */
-<<<<<<< copilot/add-duplicate-pin-button
         selectedLine: null as {
           name: string | undefined
+          description: string | undefined
+          iconImg: string | undefined
+          iconMdi: string | undefined
           waypoints: Waypoint[]
           color: string | undefined
+          authorUserId: string | undefined
           width: number | undefined } | null,
-=======
-        selectedLine: null as { name: string | undefined, description: string | undefined, iconImg: string | undefined, iconMdi: string | undefined, waypoints: Waypoint[], color: string | undefined, width: number | undefined, authorUserId: string | undefined } | null,
->>>>>>> develop
         /** 編集中の線のインデックス */
         selectedLineIndex: -1,
         /** 編集中の経由地点 */
@@ -1143,7 +1143,6 @@ div(style="height: 100%; width: 100%")
         selectedWaypointLineIdx: -1,
         /** 編集中の経由地点のインデックス */
         selectedWaypointWpIdx: -1,
-<<<<<<< copilot/add-duplicate-pin-button
         /** 最後に操作したピンのスタイル */
         lastPointStyle: null as {
           iconMdi: string | undefined
@@ -1159,14 +1158,12 @@ div(style="height: 100%; width: 100%")
           iconName: string | undefined
           iconImg: string | undefined
           width: number | undefined } | null,
-=======
         /** 画像アイコン選択ダイアログ表示フラグ */
         iconImgDialog: false,
         /** 画像アイコン選択ダイアログのターゲット */
         iconImgDialogTarget: null as 'point' | 'line' | 'waypoint' | null,
         /** 使用可能なアイコン画像リスト */
         iconImages,
->>>>>>> develop
       }
     },
     computed: {
