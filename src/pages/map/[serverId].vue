@@ -1413,10 +1413,10 @@ div(style="height: 100%; width: 100%")
         this.detailCardTarget = null
         this.deletePointDialog = false
       },
-      /** ピンを複製する（約5m東にずらして配置） */
+      /** ピンを複製する（約100m東にずらして配置） */
       duplicatePoint () {
         const METERS_PER_DEGREE_AT_EQUATOR = 111_320
-        const DUPLICATE_OFFSET_METERS = 5
+        const DUPLICATE_OFFSET_METERS = 100
         const target = this.detailCardTarget as Map['points'][number] | null
         if (!target) return
         const lat: number = target.latlng[0]
