@@ -1,5 +1,17 @@
 <template lang="pug">
 div(style="height: 100%; width: 100%")
+  //- 地図データ取得中ローディングオーバーレイ
+  v-overlay(
+    v-model="fetchMapLoading"
+    contained
+    persistent
+    style="display: flex; align-items: center; justify-content: center;"
+  )
+    v-progress-circular(
+      indeterminate
+      color="primary"
+      size="64"
+    )
   LMap(
     :zoom="leaflet.zoom"
     :center="leaflet.center"
@@ -591,11 +603,18 @@ div(style="height: 100%; width: 100%")
             style="background-color: rgb(var(--v-theme-primary)); color: white;"
           ) 保存
           hr.my-4
+        v-alert.mb-2(
+          v-if="serverIdConflict"
+          type="warning"
+          variant="outlined"
+          density="compact"
+        ) このサーバーIDは他のユーザーが使用中のため、アップロードできません。別のIDを使用してください。
         v-btn.my-2(
           v-if="isEditorable"
-          :disabled="mapData.serverId === '' || mapData.name === '' || myProfile.guest"
+          :disabled="mapData.serverId === '' || mapData.name === '' || myProfile.guest || serverIdConflict"
+          :loading="uploadLoading"
           text
-          @click="Toast.show({ text: '未実装' })"
+          @click="uploadMap"
           append-icon="mdi-upload"
           style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
         ) サーバーにアップロード
@@ -1023,6 +1042,32 @@ div(style="height: 100%; width: 100%")
       v-card-actions
         v-spacer
         v-btn(@click="iconImgDialog = false") キャンセル
+  //- 所有権移転確認ダイアログ
+  v-dialog(
+    v-model="claimOwnershipDialog"
+    persistent
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") この地図の所有権を取得しますか？
+      v-card-text
+        .text-content
+          p この地図のオーナーがゲストのままです。
+          .my-2
+          p 現在のアカウント（{{ myProfile.userId }}）に所有権を移してサーバーにアップロードするか、ゲストのままローカルにのみ保存するか選択してください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="claimOwnershipDialog = false; performLocalSave()"
+          prepend-icon="mdi-content-save"
+        ) ローカルのみ保存
+        v-btn(
+          style="background-color: rgb(var(--v-theme-primary)); color: white"
+          text
+          @click="claimOwnershipAndSave"
+          prepend-icon="mdi-account-check"
+        ) 所有権を取得してアップロード
 </template>
 
 <script lang="ts">
@@ -1166,6 +1211,14 @@ div(style="height: 100%; width: 100%")
         iconImgDialogTarget: null as 'point' | 'line' | 'waypoint' | null,
         /** 使用可能なアイコン画像リスト */
         iconImages,
+        /** アップロード中フラグ */
+        uploadLoading: false,
+        /** サーバーから地図データ取得中フラグ */
+        fetchMapLoading: false,
+        /** サーバーIDが他のユーザーと競合しているか */
+        serverIdConflict: false,
+        /** 所有権移転確認ダイアログ表示フラグ */
+        claimOwnershipDialog: false,
       }
     },
     computed: {
@@ -1424,6 +1477,9 @@ div(style="height: 100%; width: 100%")
         } else {
           Toast.show({ text: '地図の読み込みに失敗しました。' })
         }
+        // サーバーから最新データを取得
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.fetchMapFromServer()
       }
     },
     unmounted () {
@@ -1535,23 +1591,8 @@ div(style="height: 100%; width: 100%")
           this.drawingLine.waypoints[wpIdx].latlng = [latlng.lat, latlng.lng]
         }
       },
-      /** 編集内容を保存 */
-      save () {
-        if (!this.isEditorable) {
-          Toast.show({ text: '保存できませんでした。編集権限がありません。' })
-          return
-        } else if (!this.mapData.name) {
-          Toast.show({ text: '地図の名前を入力してください。' })
-          return
-        } else if (!this.mapData.serverId) {
-          Toast.show({ text: '地図のIDを入力してください。' })
-          return
-        }
-        // オフライン保存の場合はそのまま保存してよいが、オンライン保存の場合はサーバーに保存してから保存完了とする
-        // また、オンライン保存の場合はIDの重複を避けるため、IDが重複していないか確認する
-        // 一旦オフラインへ保存し、公開ボタンは別で用意する
-        // 一回でもサーバーにアップロードしたものは、保存時にサーバーにも保存するようにする
-
+      /** ローカルストアへの保存（共通処理） */
+      performLocalSave () {
         let cnt = 0
         let found = false
         for (const map of this.maps.maps) {
@@ -1569,6 +1610,39 @@ div(style="height: 100%; width: 100%")
         }
         Toast.show({ text: '保存しました！' })
         this.editMode = false
+      },
+      /** 編集内容を保存 */
+      save () {
+        if (!this.isEditorable) {
+          Toast.show({ text: '保存できませんでした。編集権限がありません。' })
+          return
+        } else if (!this.mapData.name) {
+          Toast.show({ text: '地図の名前を入力してください。' })
+          return
+        } else if (!this.mapData.serverId) {
+          Toast.show({ text: '地図のIDを入力してください。' })
+          return
+        }
+        // ログイン済みでオーナーがゲストの場合は所有権移転ダイアログを表示
+        if (!this.myProfile.guest && this.mapData.ownerUserId === 'guest') {
+          this.claimOwnershipDialog = true
+          return
+        }
+        this.performLocalSave()
+        // ログイン済みユーザーは自動的にサーバーにアップロード（ID競合がない場合）
+        // アップロードはバックグラウンドで実行し、成否はトーストで通知する
+        if (!this.myProfile.guest && !this.serverIdConflict) {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          this.uploadMap()
+        }
+      },
+      /** 所有権を現在のユーザーに移転してローカル保存＋サーバーアップロード */
+      claimOwnershipAndSave () {
+        this.claimOwnershipDialog = false
+        this.mapData.ownerUserId = this.myProfile.userId
+        this.performLocalSave()
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.uploadMap()
       },
       /** 線描画を開始する */
       startDrawingLine (point: { latlng: [number, number] }) {
@@ -1839,6 +1913,82 @@ div(style="height: 100%; width: 100%")
           url: content,
           title: title,
         })
+      },
+      /** 地図をサーバーにアップロードする */
+      async uploadMap () {
+        if (this.myProfile.guest) {
+          Toast.show({ text: 'ログインが必要です。' })
+          return
+        }
+        if (!this.mapData.serverId || !this.mapData.name) {
+          Toast.show({ text: '地図のIDと名前を入力してください。' })
+          return
+        }
+        this.uploadLoading = true
+        try {
+          const res = await this.sendAjaxWithAuth('/uploadMap.php', {
+            id: this.myProfile.userId,
+            token: this.myProfile.userToken,
+          }, {
+            mapData: JSON.stringify(this.mapData),
+          }, true) as any
+          if (res.body.status === 'ok') {
+            Toast.show({ text: 'サーバーにアップロードしました！' })
+          } else {
+            Toast.show({ text: res.body.reason ?? 'アップロードに失敗しました。' })
+          }
+        } catch (e: any) {
+          if (e?.ajaxInfo?.status === 403) {
+            Toast.show({ text: '権限がないためアップロードできません。' })
+          } else {
+            Toast.show({ text: 'アップロードに失敗しました。' })
+          }
+        } finally {
+          this.uploadLoading = false
+        }
+      },
+      /** サーバーから地図データを取得する */
+      async fetchMapFromServer () {
+        if (!this.params || this.params === 'create') return
+        this.fetchMapLoading = true
+        this.serverIdConflict = false
+        try {
+          const headers = {
+            serverId: this.params,
+          } as any
+          if (!this.myProfile.guest) {
+            headers.id = this.myProfile.userId
+            headers.token = this.myProfile.userToken
+          }
+          const res = await this.sendAjaxWithAuth('/getMap.php', headers, null, false) as any
+          if (res.body.status === 'ok' && res.body.map) {
+            const serverMap = res.body.map
+            this.mapData = {
+              ...serverMap,
+              lines: serverMap.lines ?? [],
+              points: serverMap.points ?? [],
+              sharedUserIds: serverMap.sharedUserIds ?? [],
+              editorUserIds: serverMap.editorUserIds ?? [],
+            }
+            // ローカルストアも更新
+            const idx = this.maps.maps.findIndex((m: any) => m.serverId === this.params)
+            if (idx >= 0) {
+              this.maps.maps[idx] = this.mapData
+            } else {
+              this.maps.maps.push(this.mapData)
+            }
+          }
+        } catch (e: any) {
+          if (e?.ajaxInfo?.status === 404) {
+            // サーバーに地図がない場合はローカルデータをそのまま使用（通知不要）
+          } else if (e?.ajaxInfo?.status === 403) {
+            // 他のユーザーがこのサーバーIDを保有しているため、アップロード不可を通知
+            this.serverIdConflict = true
+          }
+          // その他のエラー（ネットワーク等）はローカルデータをそのまま使用
+        } finally {
+          this.fetchMapLoading = false
+        }
       },
     },
   }
