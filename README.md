@@ -47,7 +47,8 @@ Vue 3 + Capacitor で構築されたハイブリッドアプリで、PHPバッ�
 Map-Studio/
 ├── src/                        # Vue フロントエンドソース
 │   ├── pages/                  # ページコンポーネント（ファイルベースルーティング）
-│   │   ├── index.vue           # ホーム（地図表示）
+│   │   ├── index.vue           # ホーム（サーバー一覧）
+│   │   ├── [ready].vue         # 準備中ページ
 │   │   ├── login.vue           # ログイン
 │   │   ├── registar.vue        # アカウント登録
 │   │   ├── friendlist.vue      # フレンドリスト
@@ -56,9 +57,17 @@ Map-Studio/
 │   │   ├── terms.vue           # 利用規約
 │   │   ├── tutorial.vue        # チュートリアル
 │   │   ├── password_reset.vue  # パスワードリセット
+│   │   ├── map/
+│   │   │   └── [serverId].vue  # 地図表示（サーバーID指定）
 │   │   ├── settings/           # 設定ページ群
-│   │   └── user/               # ユーザープロフィールページ
+│   │   │   ├── index.vue       # 設定トップ
+│   │   │   ├── profile.vue     # プロフィール設定
+│   │   │   ├── display.vue     # 表示設定
+│   │   │   └── developer-options.vue  # 開発者オプション
+│   │   └── user/
+│   │       └── [userId].vue    # ユーザープロフィールページ
 │   ├── components/             # 共通コンポーネント
+│   ├── router/                 # Vue Router 設定
 │   ├── stores/                 # Pinia ストア
 │   ├── js/                     # ユーティリティ・API関数
 │   ├── mixins/                 # Vue ミックスイン
@@ -66,10 +75,7 @@ Map-Studio/
 │   └── plugins/                # Vuetify等プラグイン設定
 ├── android/                    # Capacitor Androidネイティブコード
 │   └── app/src/main/java/xyz/enoki/mapstudio/
-│       ├── MainActivity.java               # アプリエントリポイント
-│       ├── LocationForegroundService.java  # バックグラウンド位置情報サービス
-│       ├── ServiceRestartReceiver.java     # サービス再起動ブロードキャストレシーバー
-│       └── PermissionUtils.java            # 権限チェックユーティリティ
+│       └── MainActivity.java   # アプリエントリポイント
 ├── php/                        # PHP APIサーバー
 │   ├── createAccount.php       # アカウント登録
 │   ├── loginAccount.php        # ログイン
@@ -81,7 +87,6 @@ Map-Studio/
 │   ├── sendPushForAccount.php  # プッシュ通知送信
 │   └── ...
 ├── public/                     # 静的ファイル（アイコン等）
-├── runners/                    # Capacitor バックグラウンドランナー
 ├── database.sql                # MySQL スキーマ
 ├── capacitor.config.ts         # Capacitor設定
 └── vite.config.mts             # Vite設定
@@ -201,7 +206,7 @@ PHPMyAdminが使える環境であれば、GUIからインポートも可能で�
 # 依存パッケージのインストール
 yarn install
 
-# 開発サーバー起動（http://localhost:9000）
+# 開発サーバー起動（http://localhost:4040）
 yarn dev
 
 # 本番ビルド
@@ -219,42 +224,6 @@ npx cap sync android
 # Android APKビルド
 cd android && ./gradlew assembleDebug
 ```
-
----
-
-## バックグラウンドサービスについて
-
-このアプリはバックグラウンドでの継続的な位置情報取得のため、Androidネイティブのフォアグラウンドサービスを実装しています。
-
-### 実装内容
-
-| クラス | 役割 |
-| --- | --- |
-| `LocationForegroundService` | 位置情報の継続取得・永続通知の表示 |
-| `ServiceRestartReceiver` | タスクキル・デバイス再起動時のサービス自動再起動 |
-| `MainActivity` | アプリ起動時のサービス開始・権限リクエスト |
-| `PermissionUtils` | 位置情報権限チェックのユーティリティ |
-
-### 再起動メカニズム
-
-- **START_STICKY**: システムがメモリ不足でサービスを終了した場合、自動再起動
-- **AlarmManager**: タスクキル時に1秒後の再起動をスケジュール
-- **BOOT_COMPLETED**: デバイス再起動時にサービスを自動開始
-
-### 必要な権限
-
-- `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_LOCATION`: フォアグラウンドサービス実行
-- `ACCESS_FINE_LOCATION` / `ACCESS_BACKGROUND_LOCATION`: 位置情報取得
-- `RECEIVE_BOOT_COMPLETED`: デバイス起動時の自動起動
-- `SCHEDULE_EXACT_ALARM`: 正確なタイマーによる再起動スケジュール
-- `POST_NOTIFICATIONS`: 通知表示（Android 13以降）
-
-### 制限事項
-
-- Android 13（API 33）以降では、通知ドロワーの「停止」ボタンでサービスを強制終了できます（システム仕様のため回避不可）
-- 設定画面からの「強制停止」を行うとサービスは停止し、ユーザーが再度アプリを開くまで再起動しません
-
-詳細は [`BACKGROUND_SERVICE.md`](./BACKGROUND_SERVICE.md) および [`IMPLEMENTATION_JAPANESE.md`](./IMPLEMENTATION_JAPANESE.md) を参照してください。
 
 ---
 
@@ -280,4 +249,4 @@ yarn install
 yarn dev
 ```
 
-ポートが競合している場合は `vite.config.mts` の `server.port` を変更してください（デフォルト: 9000）。
+ポートが競合している場合は `vite.config.mts` の `server.port` を変更してください（デフォルト: 4040）。
