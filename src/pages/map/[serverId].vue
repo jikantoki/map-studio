@@ -152,34 +152,35 @@ div(style="height: 100%; width: 100%")
           p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0; width: 0; overflow: hidden;'")
             span {{ mapPoint.name }}
     //- 線上の500m毎アイコンマーカー
-    LMarker(
-      v-for="(marker, mIdx) in linesIntervalMarkers"
-      :key="`interval-${marker.lineIdx}-${mIdx}`"
-      :lat-lng="marker.latlng"
-      @click="detailCardTarget = mapData.lines[marker.lineIdx]"
-    )
-      LIcon(
-        :icon-size="[0,0]"
-        style="border: none;"
-        :icon-anchor="[16, 16]"
+    .interval-markers(v-if="!editMode")
+      LMarker(
+        v-for="(marker, mIdx) in linesIntervalMarkers"
+        :key="`interval-${marker.lineIdx}-${mIdx}`"
+        :lat-lng="marker.latlng"
+        @click="detailCardTarget = mapData.lines[marker.lineIdx]"
       )
-        div(style="display: flex; align-items: center; width: auto;")
-          .icon-wrap(
-            v-if="mapData.lines[marker.lineIdx] && mapData.lines[marker.lineIdx].iconMdi"
-            style="display: flex; align-items: center; justify-content: center; height: 32px; width: 32px; border-radius: 9999px; background-color: white; border: solid 2px #3388ff;"
-          )
-            Icon(
-              :data="mapData.lines[marker.lineIdx].iconMdi"
-              size="22px"
-              :style="`color: ${mapData.lines[marker.lineIdx].color ?? '#3388ff'}`"
+        LIcon(
+          :icon-size="[0,0]"
+          style="border: none;"
+          :icon-anchor="[16, 16]"
+        )
+          div(style="display: flex; align-items: center; width: auto;")
+            .icon-wrap(
+              v-if="mapData.lines[marker.lineIdx] && mapData.lines[marker.lineIdx].iconMdi"
+              style="display: flex; align-items: center; justify-content: center; height: 32px; width: 32px; border-radius: 9999px; background-color: white; border: solid 2px #3388ff;"
             )
-          img(
-            v-else-if="mapData.lines[marker.lineIdx] && mapData.lines[marker.lineIdx].iconImg"
-            loading="lazy"
-            :src="mapData.lines[marker.lineIdx].iconImg"
-            style="height: 32px; width: 32px; border-radius: 9999px; border: solid 2px #3388ff;"
-            onerror="this.src='/icons/question.png'"
-          )
+              Icon(
+                :data="mapData.lines[marker.lineIdx].iconMdi"
+                size="22px"
+                :style="`color: ${mapData.lines[marker.lineIdx].color ?? '#3388ff'}`"
+              )
+            img(
+              v-else-if="mapData.lines[marker.lineIdx] && mapData.lines[marker.lineIdx].iconImg"
+              loading="lazy"
+              :src="mapData.lines[marker.lineIdx].iconImg"
+              style="height: 32px; width: 32px; border-radius: 9999px; border: solid 2px #3388ff;"
+              onerror="this.src='/icons/question.png'"
+            )
   //-- 下部のアクションバー --
   .action-bar
     .buttons
@@ -756,6 +757,17 @@ div(style="height: 100%; width: 100%")
               auto-grow
               rows="1"
               clearable
+            )
+          .info
+            v-icon mdi-text-box-edit-outline
+            v-number-input(
+              v-model="selectedLine.width"
+              label="線の幅（px）"
+              placeholder="例: 4"
+              variant="outlined"
+              style="flex: 1;"
+              :min="1"
+              :max="20"
             )
           .info.my-2
             v-icon mdi-palette
@@ -1390,7 +1402,7 @@ div(style="height: 100%; width: 100%")
       },
       /** 確認ダイアログで承認後に点を削除する */
       deletePoint () {
-        this.mapData.points = this.mapData.points.filter((point) => point !== this.detailCardTarget)
+        this.mapData.points = this.mapData.points.filter(point => point !== this.detailCardTarget)
         this.detailCardTarget = null
         this.deletePointDialog = false
       },
