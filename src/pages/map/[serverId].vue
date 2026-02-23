@@ -412,6 +412,13 @@ div(style="height: 100%; width: 100%")
           style="background-color: rgb(var(--v-theme-secondary)); color: white; width: 100%;"
         ) ここから線を描画
         v-btn.my-2(
+          v-if="editMode && !detailCardTarget.waypoints"
+          text
+          @click="duplicatePoint"
+          prepend-icon="mdi-content-copy"
+          style="background-color: rgb(var(--v-theme-secondary)); color: white; width: 100%;"
+        ) 複製
+        v-btn.my-2(
           v-if="editMode"
           text
           @click="deletePointDialog = true"
@@ -1405,6 +1412,26 @@ div(style="height: 100%; width: 100%")
         this.mapData.points = this.mapData.points.filter(point => point !== this.detailCardTarget)
         this.detailCardTarget = null
         this.deletePointDialog = false
+      },
+      /** ピンを複製する（約5m東にずらして配置） */
+      duplicatePoint () {
+        const METERS_PER_DEGREE_AT_EQUATOR = 111_320
+        const DUPLICATE_OFFSET_METERS = 5
+        const target = this.detailCardTarget as Map['points'][number] | null
+        if (!target) return
+        const lat: number = target.latlng[0]
+        const lng: number = target.latlng[1]
+        const lngOffset = DUPLICATE_OFFSET_METERS / (METERS_PER_DEGREE_AT_EQUATOR * Math.cos(lat * Math.PI / 180))
+        this.mapData.points.push({
+          latlng: [lat, lng + lngOffset],
+          name: target.name,
+          description: target.description,
+          iconImg: target.iconImg,
+          iconMdi: target.iconMdi,
+          iconColor: target.iconColor,
+          authorUserId: this.myProfile.userId,
+        })
+        this.detailCardTarget = null
       },
       /** 確認ダイアログで承認後に線を削除する */
       deleteLine () {
