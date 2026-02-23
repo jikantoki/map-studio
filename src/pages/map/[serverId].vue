@@ -48,7 +48,9 @@ div(style="height: 100%; width: 100%")
         v-for="(wp, wpIdx) in linesWaypointsFlat"
         :key="`wp-${wp.lineIdx}-${wp.wpIdx}`"
         :lat-lng="wp.latlng"
+        :draggable="editMode"
         @click="editMode ? openWaypointEditor(wp.lineIdx, wp.wpIdx) : detailCardTarget = wp.waypoint"
+        @dragend="onWaypointDragEnd($event, wp.lineIdx, wp.wpIdx)"
       )
         LIcon(
           :icon-size="[0,0]"
@@ -92,6 +94,8 @@ div(style="height: 100%; width: 100%")
       v-for="(wp, wpIdx) in (drawingLine ? drawingLine.waypoints : [])"
       :key="`drawing-wp-${wpIdx}`"
       :lat-lng="wp.latlng"
+      :draggable="true"
+      @dragend="onDrawingWaypointDragEnd($event, wpIdx)"
     )
       LIcon(
         :icon-size="[0,0]"
@@ -104,7 +108,9 @@ div(style="height: 100%; width: 100%")
       v-for="(mapPoint, index) in mapData.points"
       :key="index"
       :lat-lng="mapPoint.latlng"
+      :draggable="editMode && !drawingLine"
       @click="!drawingLine ? detailCardTarget = mapPoint : null"
+      @dragend="onPointDragEnd($event, index)"
       )
       LIcon(
         :icon-size="[0,0]"
@@ -1095,6 +1101,28 @@ div(style="height: 100%; width: 100%")
           iconColor: undefined,
           authorUserId: this.myProfile.userId,
         })
+      },
+      /** ドラッグ後にポイントの位置を更新する */
+      onPointDragEnd (event: any, index: number) {
+        const latlng = event.target.getLatLng()
+        if (this.mapData.points[index]) {
+          this.mapData.points[index].latlng = [latlng.lat, latlng.lng]
+        }
+      },
+      /** ドラッグ後に保存済み経由地点の位置を更新する */
+      onWaypointDragEnd (event: any, lineIdx: number, wpIdx: number) {
+        const latlng = event.target.getLatLng()
+        const wp = this.mapData.lines[lineIdx]?.waypoints[wpIdx]
+        if (wp) {
+          wp.latlng = [latlng.lat, latlng.lng]
+        }
+      },
+      /** ドラッグ後に描画中経由地点の位置を更新する */
+      onDrawingWaypointDragEnd (event: any, wpIdx: number) {
+        const latlng = event.target.getLatLng()
+        if (this.drawingLine?.waypoints[wpIdx]) {
+          this.drawingLine.waypoints[wpIdx].latlng = [latlng.lat, latlng.lng]
+        }
       },
       /** 編集内容を保存 */
       save () {
