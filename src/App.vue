@@ -203,4 +203,8 @@ img {
 .v-dialog > .v-overlay__content, .v-dialog > .v-overlay__content > form{
   align-items: center;
 }
+
+pwa-toast {
+  z-index: 5000;
+}
 </style>

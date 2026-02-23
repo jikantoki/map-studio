@@ -33,6 +33,38 @@ export type Map = {
     /** 追加・編集した人のユーザーID */
     authorUserId: string | undefined
   }[]
+  /** 線リスト */
+  lines: {
+    /** 線の名前 */
+    name: string | undefined
+    /** 線の説明 */
+    description: string | undefined
+    /** 線のアイコン画像URL */
+    iconImg: string | undefined
+    /** 線のアイコンMdi */
+    iconMdi: string | undefined
+    /** 経由地点リスト */
+    waypoints: {
+      /** 経由地点の名前 */
+      name: string | undefined
+      /** 経由地点の説明 */
+      description: string | undefined
+      /** 経由地点のアイコン画像URL */
+      iconImg: string | undefined
+      /** 経由地点のアイコンMdi */
+      iconMdi: string | undefined
+      /** 経由地点のアイコンの色 */
+      iconColor: string | undefined
+      /** 経由地点の位置 */
+      latlng: [lat: number, lng: number]
+    }[]
+    /** 線の色 */
+    color: string | undefined
+    /** 線の太さ */
+    width: number | undefined
+    /** 追加・編集した人のユーザーID */
+    authorUserId: string | undefined
+  }[]
   /** 閲覧可能ユーザーIDリスト（isPublicがtrueの場合に有効） */
   sharedUserIds: string[]
   /** 編集可能ユーザーIDリスト */
