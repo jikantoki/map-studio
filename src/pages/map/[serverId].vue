@@ -1042,10 +1042,16 @@ div(style="height: 100%; width: 100%")
         lastPointStyle: null as {
           iconMdi: string | undefined
           iconColor: string | undefined
+          iconDescription: string | undefined
+          iconName: string | undefined
           iconImg: string | undefined } | null,
         /** 最後に操作した線のスタイル */
         lastLineStyle: null as {
           color: string | undefined
+          iconMdi: string | undefined
+          iconDescription: string | undefined
+          iconName: string | undefined
+          iconImg: string | undefined
           width: number | undefined } | null,
       }
     },
@@ -1128,6 +1134,8 @@ div(style="height: 100%; width: 100%")
               iconMdi: oldProfile.iconMdi,
               iconColor: oldProfile.iconColor,
               iconImg: oldProfile.iconImg,
+              iconDescription: oldProfile.description,
+              iconName: oldProfile.name,
             }
           }
           if (!newProfile || !newProfile.location) {
@@ -1148,6 +1156,10 @@ div(style="height: 100%; width: 100%")
           this.lastLineStyle = {
             color: oldLine.color,
             width: oldLine.width,
+            iconMdi: oldLine.iconMdi,
+            iconImg: oldLine.iconImg,
+            iconDescription: oldLine.description,
+            iconName: oldLine.name,
           }
         }
       },
@@ -1421,13 +1433,13 @@ div(style="height: 100%; width: 100%")
           this.mapData.lines = []
         }
         this.mapData.lines.push({
-          name: `線${this.mapData.lines.length + 1}`,
           waypoints: this.drawingLine.waypoints,
           color: this.lastLineStyle?.color ?? '#3388ff',
           width: this.lastLineStyle?.width ?? 4,
-          iconImg: undefined,
-          iconMdi: 'OpenInFullOutlined',
-          description: undefined,
+          iconImg: this.lastLineStyle?.iconImg,
+          iconMdi: this.lastLineStyle?.iconMdi ?? this.lastLineStyle?.iconImg ? undefined : 'OpenInFullOutlined',
+          description: this.lastLineStyle?.iconDescription,
+          name: this.lastLineStyle?.iconName ?? `線${this.mapData.lines.length + 1}`,
           authorUserId: this.myProfile.userId,
         })
         this.drawingLine = null
