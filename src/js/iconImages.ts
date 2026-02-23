@@ -1,5 +1,5 @@
 /**
- * /public/icons/ 内の画像ファイル一覧
+ * /public/icons/ 内の画像ファイル一覧（URLパスは /icons/ から始まる）
  */
 export type IconImage = {
   /** ファイルパス（/icons/から始まるパス） */

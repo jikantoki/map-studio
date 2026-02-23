@@ -1066,7 +1066,7 @@ div(style="height: 100%; width: 100%")
         /** 自分の現在地 */
         myLocation: [0, 0],
         /** 詳細カードのターゲット */
-        detailCardTarget: null as {} | null,
+        detailCardTarget: null as { iconMdi: string | undefined; iconImg: string | undefined; iconColor: string | undefined; name: string | undefined; description: string | undefined; authorUserId: string | undefined; waypoints?: { latlng: [number, number] }[]; location?: string } | null,
         /** 詳細カードに現在の住所を表示 */
         detailCardTargetAddress: null as string | null,
         /** 自分のプロフィール */
@@ -1121,7 +1121,7 @@ div(style="height: 100%; width: 100%")
         /** 画像アイコン選択ダイアログ表示フラグ */
         iconImgDialog: false,
         /** 画像アイコン選択ダイアログのターゲット */
-        iconImgDialogTarget: '' as 'point' | 'line' | 'waypoint',
+        iconImgDialogTarget: null as 'point' | 'line' | 'waypoint' | null,
         /** 使用可能なアイコン画像リスト */
         iconImages,
       }
@@ -1368,11 +1368,11 @@ div(style="height: 100%; width: 100%")
       /** 地点のアイコン種別変更 */
       onPointIconTypeChange (type: string) {
         if (type === 'img') {
-          ;(this.detailCardTarget as any).iconMdi = undefined
+          this.detailCardTarget!.iconMdi = undefined
           this.iconImgDialogTarget = 'point'
           this.iconImgDialog = true
         } else {
-          ;(this.detailCardTarget as any).iconImg = undefined
+          this.detailCardTarget!.iconImg = undefined
         }
       },
       /** 線のアイコン種別変更 */
@@ -1398,8 +1398,8 @@ div(style="height: 100%; width: 100%")
       /** 画像アイコンを選択する */
       selectIconImg (path: string) {
         if (this.iconImgDialogTarget === 'point' && this.detailCardTarget) {
-          ;(this.detailCardTarget as any).iconImg = path
-          ;(this.detailCardTarget as any).iconMdi = undefined
+          this.detailCardTarget.iconImg = path
+          this.detailCardTarget.iconMdi = undefined
         } else if (this.iconImgDialogTarget === 'line' && this.selectedLine) {
           this.selectedLine.iconImg = path
           this.selectedLine.iconMdi = undefined
