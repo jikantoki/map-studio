@@ -933,9 +933,11 @@ div(style="height: 100%; width: 100%")
       selectedWaypointIsActive () {
         return this.editMode && this.selectedWaypoint !== null
       },
-      /** 全ての線の500m毎アイコン表示位置 */
+      /** 全ての線のズームレベルに応じた間隔でのアイコン表示位置 */
       linesIntervalMarkers (): { lineIdx: number, latlng: [number, number] }[] {
-        const INTERVAL = 500
+        /** アイコンを表示する距離 */
+        // this.leaflet.zoomは整数だが、ズームレベルが1上がるごとに地図上の距離が半分になるので、距離も半分にする（Math関数は重くなるので使わない）
+        const INTERVAL = 1000 * (2 ** (15 - this.leaflet.zoom))
         const result: { lineIdx: number, latlng: [number, number] }[] = []
         for (const [lineIdx, line] of this.mapData.lines.entries()) {
           if (!line.iconMdi && !line.iconImg) continue
@@ -1085,8 +1087,8 @@ div(style="height: 100%; width: 100%")
       /** 現在地を監視 */
       Geolocation.watchPosition({
         enableHighAccuracy: true,
-        timeout: 20_000,
-        interval: 20_000,
+        timeout: 2000,
+        interval: 2000,
       }, position =>
         this.watchPosition(position),
       )
