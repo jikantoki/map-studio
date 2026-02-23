@@ -79,7 +79,7 @@ div(style="height: 100%; width: 100%")
               span {{ wp.waypoint.name }}
               .wp-dot(
                 v-if="!wp.waypoint.iconMdi && !wp.waypoint.iconImg && editMode"
-                style="height: 24px; width: 24px; border-radius: 9999px; background-color: white; border: solid 3px #3388ff;"
+                style="position: absolute; height: 24px; width: 24px; border-radius: 9999px; background-color: white; border: solid 3px #3388ff;"
               )
     //- 描画中の線
     LPolyline(
