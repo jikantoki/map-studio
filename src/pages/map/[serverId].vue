@@ -146,7 +146,7 @@ div(style="height: 100%; width: 100%")
             v-else-if="mapPoint.iconImg"
             loading="lazy"
             :src="mapPoint.iconImg ?? '/icons/question.png'"
-            style="height: 32px; width: 32px;"
+            style="height: 32px;"
             onerror="this.src='/icons/question.png'"
             )
           p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0; width: 0; overflow: hidden;'")
@@ -255,12 +255,13 @@ div(style="height: 100%; width: 100%")
           onerror="this.src='/icons/map.png'"
           )
   //- 編集モードであることを表示
-  .edit-mode-indicator.py-2(
+  .edit-mode-indicator(
     v-if="editMode && !drawingLine"
-    style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000; width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
     )
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
-    p 編集モード
+    p.py-2(
+      style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000; width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
+    ) 編集モード
   //- 線描画中の案内バナー
   .drawing-line-banner(
     v-if="drawingLine"
@@ -344,18 +345,39 @@ div(style="height: 100%; width: 100%")
               style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
             )
               p アイコンを設定
-              Vue3IconPicker(
-                v-model="detailCardTarget.iconMdi"
-                searchPlaceholder="アイコン名で検索…"
-                placeholder="アイコンを選択"
-                :theme="$vuetify.theme.global.name"
-                selectedIconBgColor="rgb(var(--v-theme-primary))"
-                selectedIconColor="white"
-                inputSize="large"
-                valueType="name"
-                iconLibrary="material"
+              v-select(
+                :model-value="detailCardTarget.iconImg ? 'img' : 'svg'"
+                @update:model-value="onPointIconTypeChange"
+                :items="[{ title: 'SVG（アイコン）', value: 'svg' }, { title: '画像', value: 'img' }]"
+                label="アイコン種別"
+                variant="outlined"
+                density="compact"
+                style="width: 100%;"
               )
-              p アイコン名: {{ detailCardTarget.iconMdi }}
+              template(v-if="!detailCardTarget.iconImg")
+                Vue3IconPicker(
+                  v-model="detailCardTarget.iconMdi"
+                  searchPlaceholder="アイコン名で検索…"
+                  placeholder="アイコンを選択"
+                  :theme="$vuetify.theme.global.name"
+                  selectedIconBgColor="rgb(var(--v-theme-primary))"
+                  selectedIconColor="white"
+                  inputSize="large"
+                  valueType="name"
+                  iconLibrary="material"
+                )
+                p アイコン名: {{ detailCardTarget.iconMdi }}
+              template(v-else)
+                v-btn(
+                  variant="outlined"
+                  style="width: 100%;"
+                  @click="iconImgDialog = true; iconImgDialogTarget = 'point'"
+                )
+                  img.mr-2(
+                    :src="detailCardTarget.iconImg"
+                    style="height: 1.5em; width: 1.5em; object-fit: contain;"
+                  )
+                  | 画像を変更
           .info.mt-4.mb-6
             v-icon mdi-palette
             v-btn(
@@ -724,18 +746,39 @@ div(style="height: 100%; width: 100%")
               style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
             )
               p アイコンを設定
-              Vue3IconPicker(
-                v-model="selectedLine.iconMdi"
-                searchPlaceholder="アイコン名で検索…"
-                placeholder="アイコンを選択"
-                :theme="$vuetify.theme.global.name"
-                selectedIconBgColor="rgb(var(--v-theme-primary))"
-                selectedIconColor="white"
-                inputSize="large"
-                valueType="name"
-                iconLibrary="material"
+              v-select(
+                :model-value="selectedLine.iconImg ? 'img' : 'svg'"
+                @update:model-value="onLineIconTypeChange"
+                :items="[{ title: 'SVG（アイコン）', value: 'svg' }, { title: '画像', value: 'img' }]"
+                label="アイコン種別"
+                variant="outlined"
+                density="compact"
+                style="width: 100%;"
               )
-              p アイコン名: {{ selectedLine.iconMdi }}
+              template(v-if="!selectedLine.iconImg")
+                Vue3IconPicker(
+                  v-model="selectedLine.iconMdi"
+                  searchPlaceholder="アイコン名で検索…"
+                  placeholder="アイコンを選択"
+                  :theme="$vuetify.theme.global.name"
+                  selectedIconBgColor="rgb(var(--v-theme-primary))"
+                  selectedIconColor="white"
+                  inputSize="large"
+                  valueType="name"
+                  iconLibrary="material"
+                )
+                p アイコン名: {{ selectedLine.iconMdi }}
+              template(v-else)
+                v-btn(
+                  variant="outlined"
+                  style="width: 100%;"
+                  @click="iconImgDialog = true; iconImgDialogTarget = 'line'"
+                )
+                  img.mr-2(
+                    :src="selectedLine.iconImg"
+                    style="height: 1.5em; width: 1.5em; object-fit: contain;"
+                  )
+                  | 画像を変更
           .info
             v-icon mdi-tag
             v-text-field(
@@ -823,18 +866,39 @@ div(style="height: 100%; width: 100%")
               style="width: 100%; display: flex; flex-direction: column; align-items: flex-start;"
             )
               p アイコンを設定
-              Vue3IconPicker(
-                v-model="selectedWaypoint.iconMdi"
-                searchPlaceholder="アイコン名で検索…"
-                placeholder="アイコンを選択"
-                :theme="$vuetify.theme.global.name"
-                selectedIconBgColor="rgb(var(--v-theme-primary))"
-                selectedIconColor="white"
-                inputSize="large"
-                valueType="name"
-                iconLibrary="material"
+              v-select(
+                :model-value="selectedWaypoint.iconImg ? 'img' : 'svg'"
+                @update:model-value="onWaypointIconTypeChange"
+                :items="[{ title: 'SVG（アイコン）', value: 'svg' }, { title: '画像', value: 'img' }]"
+                label="アイコン種別"
+                variant="outlined"
+                density="compact"
+                style="width: 100%;"
               )
-              p アイコン名: {{ selectedWaypoint.iconMdi }}
+              template(v-if="!selectedWaypoint.iconImg")
+                Vue3IconPicker(
+                  v-model="selectedWaypoint.iconMdi"
+                  searchPlaceholder="アイコン名で検索…"
+                  placeholder="アイコンを選択"
+                  :theme="$vuetify.theme.global.name"
+                  selectedIconBgColor="rgb(var(--v-theme-primary))"
+                  selectedIconColor="white"
+                  inputSize="large"
+                  valueType="name"
+                  iconLibrary="material"
+                )
+                p アイコン名: {{ selectedWaypoint.iconMdi }}
+              template(v-else)
+                v-btn(
+                  variant="outlined"
+                  style="width: 100%;"
+                  @click="iconImgDialog = true; iconImgDialogTarget = 'waypoint'"
+                )
+                  img.mr-2(
+                    :src="selectedWaypoint.iconImg"
+                    style="height: 1.5em; width: 1.5em; object-fit: contain;"
+                  )
+                  | 画像を変更
           .info.mt-4.mb-6
             v-icon mdi-palette
             v-btn(
@@ -923,6 +987,33 @@ div(style="height: 100%; width: 100%")
           @click="requestGeoPermission"
           prepend-icon="mdi-check"
           ) ええで！
+  //- 画像アイコン選択ダイアログ
+  v-dialog(
+    v-model="iconImgDialog"
+    max-width="500"
+  )
+    v-card
+      v-card-title 画像を選択
+      v-card-text
+        v-row
+          v-col(
+            v-for="img in iconImages"
+            :key="img.path"
+            cols="4"
+            class="text-center pa-2"
+            style="cursor: pointer;"
+            @click="selectIconImg(img.path)"
+          )
+            v-card.pa-2(elevation="1")
+              img(
+                :src="img.path"
+                style="height: 3em; width: 3em; object-fit: contain; display: block; margin: 0 auto;"
+              )
+              p.text-body-2.mt-1 {{ img.name }}
+              p.text-caption {{ img.description }}
+      v-card-actions
+        v-spacer
+        v-btn(@click="iconImgDialog = false") キャンセル
 </template>
 
 <script lang="ts">
@@ -934,6 +1025,7 @@ div(style="height: 100%; width: 100%")
 
   import { LIcon, LMap, LMarker, LPolyline, LTileLayer } from '@vue-leaflet/vue-leaflet'
   import { Icon, Vue3IconPicker } from 'vue3-icon-picker'
+  import { iconImages } from '@/js/iconImages'
   import muniArray from '@/js/muni'
   // @ts-ignore
   import mixins from '@/mixins/mixins'
@@ -975,7 +1067,16 @@ div(style="height: 100%; width: 100%")
         /** 自分の現在地 */
         myLocation: [0, 0],
         /** 詳細カードのターゲット */
-        detailCardTarget: null as {} | null,
+        detailCardTarget: null as {
+          iconMdi: string | undefined
+          iconImg: string | undefined
+          iconColor: string | undefined
+          name: string | undefined
+          description: string | undefined
+          authorUserId: string | undefined
+          waypoints?: { latlng: [number, number] }[]
+          location?: string
+        } | null,
         /** 詳細カードに現在の住所を表示 */
         detailCardTargetAddress: null as string | null,
         /** 自分のプロフィール */
@@ -1018,7 +1119,7 @@ div(style="height: 100%; width: 100%")
         /** 描画中の線 */
         drawingLine: null as { waypoints: Waypoint[] } | null,
         /** 編集中の線 */
-        selectedLine: null as { name: string | undefined, waypoints: Waypoint[], color: string | undefined, width: number | undefined } | null,
+        selectedLine: null as { name: string | undefined, description: string | undefined, iconImg: string | undefined, iconMdi: string | undefined, waypoints: Waypoint[], color: string | undefined, width: number | undefined, authorUserId: string | undefined } | null,
         /** 編集中の線のインデックス */
         selectedLineIndex: -1,
         /** 編集中の経由地点 */
@@ -1027,6 +1128,12 @@ div(style="height: 100%; width: 100%")
         selectedWaypointLineIdx: -1,
         /** 編集中の経由地点のインデックス */
         selectedWaypointWpIdx: -1,
+        /** 画像アイコン選択ダイアログ表示フラグ */
+        iconImgDialog: false,
+        /** 画像アイコン選択ダイアログのターゲット */
+        iconImgDialogTarget: null as 'point' | 'line' | 'waypoint' | null,
+        /** 使用可能なアイコン画像リスト */
+        iconImages,
       }
     },
     computed: {
@@ -1268,6 +1375,50 @@ div(style="height: 100%; width: 100%")
       App.removeAllListeners()
     },
     methods: {
+      /** 地点のアイコン種別変更 */
+      onPointIconTypeChange (type: string) {
+        if (type === 'img') {
+          this.detailCardTarget!.iconMdi = undefined
+          this.iconImgDialogTarget = 'point'
+          this.iconImgDialog = true
+        } else {
+          this.detailCardTarget!.iconImg = undefined
+        }
+      },
+      /** 線のアイコン種別変更 */
+      onLineIconTypeChange (type: string) {
+        if (type === 'img') {
+          this.selectedLine!.iconMdi = undefined
+          this.iconImgDialogTarget = 'line'
+          this.iconImgDialog = true
+        } else {
+          this.selectedLine!.iconImg = undefined
+        }
+      },
+      /** 経由地点のアイコン種別変更 */
+      onWaypointIconTypeChange (type: string) {
+        if (type === 'img') {
+          this.selectedWaypoint!.iconMdi = undefined
+          this.iconImgDialogTarget = 'waypoint'
+          this.iconImgDialog = true
+        } else {
+          this.selectedWaypoint!.iconImg = undefined
+        }
+      },
+      /** 画像アイコンを選択する */
+      selectIconImg (path: string) {
+        if (this.iconImgDialogTarget === 'point' && this.detailCardTarget) {
+          this.detailCardTarget.iconImg = path
+          this.detailCardTarget.iconMdi = undefined
+        } else if (this.iconImgDialogTarget === 'line' && this.selectedLine) {
+          this.selectedLine.iconImg = path
+          this.selectedLine.iconMdi = undefined
+        } else if (this.iconImgDialogTarget === 'waypoint' && this.selectedWaypoint) {
+          this.selectedWaypoint.iconImg = path
+          this.selectedWaypoint.iconMdi = undefined
+        }
+        this.iconImgDialog = false
+      },
       onMapClick (event: any) {
         /** クリックされた場所 */
         const latlng = event.latlng
