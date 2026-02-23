@@ -399,7 +399,7 @@ div(style="height: 100%; width: 100%")
         v-btn.my-2(
           v-if="editMode"
           text
-          @click="mapData.points = mapData.points.filter((point) => point !== detailCardTarget); detailCardTarget = null"
+          @click="deletePointDialog = true"
           prepend-icon="mdi-delete"
           style="background-color: rgb(var(--v-theme-error)); width: 100%;"
         ) 削除
@@ -586,6 +586,58 @@ div(style="height: 100%; width: 100%")
           @click="editMode = false; editModeEndDialog = false"
           prepend-icon="mdi-check"
           ) ええで！
+  //- 点を削除するか確認するダイアログ --
+  v-dialog(
+    v-model="deletePointDialog"
+    persistent
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") この点を削除しますか？
+      v-card-text
+        .text-content
+          p 削除した点は元に戻せません。
+          .my-2
+          p 続行するには、以下の「削除する」を押してください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="deletePointDialog = false"
+          prepend-icon="mdi-close"
+          ) キャンセル
+        v-btn(
+          style="background-color: rgb(var(--v-theme-error)); color: white"
+          text
+          @click="deletePoint"
+          prepend-icon="mdi-delete"
+          ) 削除する
+  //- 線を削除するか確認するダイアログ --
+  v-dialog(
+    v-model="deleteLineDialog"
+    persistent
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") この線を削除しますか？
+      v-card-text
+        .text-content
+          p 削除した線は元に戻せません。
+          .my-2
+          p 続行するには、以下の「削除する」を押してください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="deleteLineDialog = false"
+          prepend-icon="mdi-close"
+          ) キャンセル
+        v-btn(
+          style="background-color: rgb(var(--v-theme-error)); color: white"
+          text
+          @click="deleteLine"
+          prepend-icon="mdi-delete"
+          ) 削除する
   //- 選択した線の編集カード
   .selected-line-card(v-if="selectedLineCardIsActive")
     v-card(
@@ -685,7 +737,7 @@ div(style="height: 100%; width: 100%")
                 )
         v-btn.my-2(
           text
-          @click="mapData.lines.splice(selectedLineIndex, 1); selectedLine = null; selectedLineIndex = -1"
+          @click="deleteLineDialog = true"
           prepend-icon="mdi-delete"
           style="background-color: rgb(var(--v-theme-error)); width: 100%;"
         ) 削除
@@ -879,6 +931,10 @@ div(style="height: 100%; width: 100%")
         editMode: false,
         /** 編集モードを終了するか確認するダイアログの表示フラグ */
         editModeEndDialog: false,
+        /** 点を削除するか確認するダイアログの表示フラグ */
+        deletePointDialog: false,
+        /** 線を削除するか確認するダイアログの表示フラグ */
+        deleteLineDialog: false,
         /** オプションダイアログの表示フラグ */
         optionsDialog: false,
         /** 地図データ */
@@ -1257,6 +1313,19 @@ div(style="height: 100%; width: 100%")
       /** 線描画をキャンセルする */
       cancelDrawingLine () {
         this.drawingLine = null
+      },
+      /** 確認ダイアログで承認後に点を削除する */
+      deletePoint () {
+        this.mapData.points = this.mapData.points.filter((point) => point !== this.detailCardTarget)
+        this.detailCardTarget = null
+        this.deletePointDialog = false
+      },
+      /** 確認ダイアログで承認後に線を削除する */
+      deleteLine () {
+        this.mapData.lines.splice(this.selectedLineIndex, 1)
+        this.selectedLine = null
+        this.selectedLineIndex = -1
+        this.deleteLineDialog = false
       },
       /** 経由地点の編集カードを開く */
       openWaypointEditor (lineIdx: number, wpIdx: number) {
