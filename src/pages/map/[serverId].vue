@@ -81,6 +81,20 @@ div(style="height: 100%; width: 100%")
                 v-if="!wp.waypoint.iconMdi && !wp.waypoint.iconImg && editMode"
                 style="position: absolute; height: 24px; width: 24px; border-radius: 9999px; background-color: white; border: solid 3px #3388ff;"
               )
+    //- 編集モード時の経由地点追加ボタン（中間点）
+    template(v-if="editMode")
+      LMarker(
+        v-for="mid in linesMidpointsFlat"
+        :key="`mid-${mid.lineIdx}-${mid.afterWpIdx}`"
+        :lat-lng="mid.latlng"
+        @click="insertWaypointAt(mid.lineIdx, mid.afterWpIdx, mid.latlng)"
+      )
+        LIcon(
+          :icon-size="[0,0]"
+          style="border: none;"
+          :icon-anchor="[10, 10]"
+        )
+          .wp-add-btn(style="height: 20px; width: 20px; border-radius: 9999px; background-color: white; border: solid 2px #3388ff; display: flex; align-items: center; justify-content: center; color: #3388ff; font-size: 16px; font-weight: bold; cursor: pointer; line-height: 1;") +
     //- 描画中の線
     LPolyline(
       v-if="drawingLine && drawingLine.waypoints.length >= 2"
@@ -1024,6 +1038,20 @@ div(style="height: 100%; width: 100%")
         }
         return result
       },
+      /** 全ての線の隣接する経由地点間の中間点を線インデックス付きでフラット化 */
+      linesMidpointsFlat (): { lineIdx: number, afterWpIdx: number, latlng: [number, number] }[] {
+        const result: { lineIdx: number, afterWpIdx: number, latlng: [number, number] }[] = []
+        for (const [lineIdx, line] of this.mapData.lines.entries()) {
+          for (let i = 0; i < line.waypoints.length - 1; i++) {
+            const wp1 = line.waypoints[i]!
+            const wp2 = line.waypoints[i + 1]!
+            const midLat = (wp1.latlng[0] + wp2.latlng[0]) / 2
+            const midLng = (wp1.latlng[1] + wp2.latlng[1]) / 2
+            result.push({ lineIdx, afterWpIdx: i, latlng: [midLat, midLng] })
+          }
+        }
+        return result
+      },
       selectedLineCardIsActive () {
         return this.editMode && this.selectedWaypoint === null && this.selectedLine !== null
       },
@@ -1395,6 +1423,20 @@ div(style="height: 100%; width: 100%")
           this.selectedWaypointWpIdx = wpIdx
           this.selectedLine = null
         }
+      },
+      /** 経由地点を指定した位置の後に挿入する */
+      insertWaypointAt (lineIdx: number, afterWpIdx: number, latlng: [number, number]) {
+        const line = this.mapData.lines[lineIdx]
+        if (!line) return
+        const newWaypoint: Waypoint = {
+          latlng,
+          name: undefined,
+          description: undefined,
+          iconImg: undefined,
+          iconMdi: undefined,
+          iconColor: undefined,
+        }
+        line.waypoints.splice(afterWpIdx + 1, 0, newWaypoint)
       },
       /** 線の総延長距離（メートル）をスプライン上で計算する */
       calcLineDistance (waypoints: [number, number][]): number {
