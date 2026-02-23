@@ -1094,7 +1094,6 @@ div(style="height: 100%; width: 100%")
       linesIntervalMarkers (): { lineIdx: number, latlng: [number, number] }[] {
         /** アイコンを表示する距離 */
         const INTERVAL = 5000
-        console.log('Interval for markers:', INTERVAL)
         const result: { lineIdx: number, latlng: [number, number] }[] = []
         for (const [lineIdx, line] of this.mapData.lines.entries()) {
           if (!line.iconMdi && !line.iconImg) continue
