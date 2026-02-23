@@ -146,7 +146,7 @@ div(style="height: 100%; width: 100%")
             v-else-if="mapPoint.iconImg"
             loading="lazy"
             :src="mapPoint.iconImg ?? '/icons/question.png'"
-            style="height: 32px; width: 32px;"
+            style="height: 32px;"
             onerror="this.src='/icons/question.png'"
             )
           p.ml-2.name-space(:style="leaflet.zoom >= 15 ? 'opacity: 1;' : 'opacity: 0; width: 0; overflow: hidden;'")

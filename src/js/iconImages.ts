@@ -53,8 +53,8 @@ export const iconImages: IconImage[] = [
   },
   {
     path: '/icons/mario-block.png',
-    name: 'マリオブロック',
-    description: 'マリオのハテナブロック',
+    name: 'はてなブロック',
+    description: 'ゲームのはてなブロック',
   },
   {
     path: '/icons/new.png',
