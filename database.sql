@@ -3,19 +3,13 @@
 -- https://www.phpmyadmin.net/
 --
 -- ホスト: localhost
--- 生成日時: 2026 年 2 月 22 日 06:17
+-- 生成日時: 2026 年 2 月 23 日 14:18
 -- サーバのバージョン： 5.7.44-log
 -- PHP のバージョン: 7.4.33
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
 
 -- --------------------------------------------------------
 
@@ -84,6 +78,27 @@ CREATE TABLE `mail_list` (
   `mailAddress` text NOT NULL COMMENT 'メアド',
   `mailAddressStatus` text COMMENT 'メアドの有効確認とか'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='メアドのリスト';
+
+-- --------------------------------------------------------
+
+--
+-- テーブルの構造 `mapList`
+--
+
+CREATE TABLE `mapList` (
+  `randServerId` varchar(64) NOT NULL COMMENT 'サーバーのrandID',
+  `randOwnerUserId` varchar(64) NOT NULL COMMENT '鯖主のユーザーrandID',
+  `serverId` text NOT NULL COMMENT '表示用サーバーID（URL）',
+  `description` text NOT NULL COMMENT 'サーバーの説明',
+  `serverName` text NOT NULL COMMENT 'サーバー名',
+  `iconUrl` text NOT NULL COMMENT 'アイコン画像URL',
+  `createdAt` bigint(20) NOT NULL COMMENT '製作日時unixtime',
+  `isPublic` tinyint(1) NOT NULL COMMENT '公開設定',
+  `sharedUserIds` text NOT NULL COMMENT '閲覧可能ユーザーIDカンマ区切り',
+  `editorUserIds` text NOT NULL COMMENT '編集可能ユーザーIDカンマ区切り',
+  `pointsList` text NOT NULL COMMENT '地点リストJSON',
+  `linesList` text NOT NULL COMMENT '線リストJSON'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地図情報リスト';
 
 -- --------------------------------------------------------
 
@@ -277,6 +292,12 @@ ALTER TABLE `mail_list`
   ADD PRIMARY KEY (`secretId`);
 
 --
+-- テーブルのインデックス `mapList`
+--
+ALTER TABLE `mapList`
+  ADD PRIMARY KEY (`randServerId`);
+
+--
 -- テーブルのインデックス `push_token_list`
 --
 ALTER TABLE `push_token_list`
@@ -313,7 +334,3 @@ ALTER TABLE `user_profile_list`
 ALTER TABLE `user_secret_list`
   ADD PRIMARY KEY (`secretId`);
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

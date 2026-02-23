@@ -1392,9 +1392,10 @@ div(style="height: 100%; width: 100%")
 
       /** 現在地を監視 */
       Geolocation.watchPosition({
-        enableHighAccuracy: true,
         timeout: 2000,
         interval: 2000,
+        enableHighAccuracy: false, // 最初は速度優先
+        maximumAge: 30_000, // 30秒以内のキャッシュを許可
       }, position =>
         this.watchPosition(position),
       )
