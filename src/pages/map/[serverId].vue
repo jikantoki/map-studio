@@ -229,6 +229,13 @@ div(style="height: 100%; width: 100%")
         p マップ
       .button(
         v-ripple
+        @click="commentDialog = true"
+        style="opacity: 0.8;"
+        )
+        v-icon mdi-comment-outline
+        p コメント
+      .button(
+        v-ripple
         @click="optionsDialog = true"
         style="opacity: 0.8;"
         )
@@ -643,12 +650,25 @@ div(style="height: 100%; width: 100%")
         ) サーバーにアップロード
         v-list.options-list
           v-list-item.item(
+            @click="toggleFavorite"
+            v-if="!myProfile.guest"
+            )
+            .icon-and-text
+              v-icon(:color="isFavorite ? 'pink' : ''") {{ isFavorite ? 'mdi-heart' : 'mdi-heart-outline' }}
+              v-list-item-title {{ isFavorite ? 'お気に入りから削除' : 'お気に入りに追加' }}
+          v-list-item.item(
             @click="share(`https://map.enoki.xyz/map/${mapData.serverId}`, mapData.name)"
             v-if="!myProfile.guest"
             )
             .icon-and-text
               v-icon mdi-share-variant
               v-list-item-title この地図を共有する
+          v-list-item.item(
+            @click="mapQrDialog = true; optionsDialog = false"
+            )
+            .icon-and-text
+              v-icon mdi-qrcode
+              v-list-item-title この地図のQRコードを表示
   //- 編集モードを終了するか確認するダイアログ --
   v-dialog(
     v-model="editModeEndDialog"
@@ -1101,23 +1121,8 @@ div(style="height: 100%; width: 100%")
       v-card-text
         p.mb-4 以下のURLを共有してください
         pre.pa-4(style="border-radius: 8px; word-break: break-all;") {{ mapQrUrl }}
-        .canvas-area.my-4(
-          style="display: flex; justify-content: center;"
-          v-show="!qrLoading"
-          )
+        .canvas-area.my-4(style="display: flex; justify-content: center;")
           canvas#map-qr-canvas(style="border-radius: 10%; max-width: 20em; max-height: 20em;")
-        .qr-loading.my-4(
-          v-show="qrLoading"
-          style="display: flex; justify-content: center; width: 70vw; height: 70vw; max-width: 20em; max-height: 20em; background-color: white; border-radius: 10%; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-self: center;"
-        )
-          v-progress-circular.my-4(
-            indeterminate
-            :size="64"
-            color="black"
-            )
-          p.my-4(
-            style="color: black;"
-          ) QRコード読み込み中…
       v-card-actions
         v-btn(
           @click="share(mapQrUrl, mapData.name)"
@@ -1196,6 +1201,7 @@ div(style="height: 100%; width: 100%")
   import { Toast } from '@capacitor/toast'
 
   import { LIcon, LMap, LMarker, LPolyline, LTileLayer } from '@vue-leaflet/vue-leaflet'
+  import { defineComponent } from 'vue'
   import { Icon, Vue3IconPicker } from 'vue3-icon-picker'
   import { iconImages } from '@/js/iconImages'
   import muniArray from '@/js/muni'
@@ -1216,7 +1222,7 @@ div(style="height: 100%; width: 100%")
     latlng: [number, number]
   }
 
-  export default {
+  export default defineComponent({
     components: {
       LMap,
       LMarker,
@@ -1357,8 +1363,6 @@ div(style="height: 100%; width: 100%")
         newComment: '',
         /** コメント送信中フラグ */
         commentLoading: false,
-        /** QRコード読み込み中フラグ */
-        qrLoading: false,
       }
     },
     computed: {
@@ -1478,43 +1482,18 @@ div(style="height: 100%; width: 100%")
       /** QRコードダイアログが開いたらQRコードを生成 */
       mapQrDialog: {
         handler: async function (val: boolean) {
-          this.qrLoading = true
           if (!val) return
           const host = window.location.host
           this.mapQrUrl = `https://${host}/map/${this.mapData.serverId}`
           await this.$nextTick()
           const canvas = document.querySelector('#map-qr-canvas') as HTMLCanvasElement | null
           if (!canvas) return
-          const ctx = canvas.getContext('2d')
-          if (!ctx) return false
           const QRCode = (await import('qrcode')).default
-          QRCode.toCanvas(canvas, this.mapQrUrl, { scale: 10 })
+          QRCode.toCanvas(canvas, this.mapQrUrl, { scale: 8 })
           canvas.style.height = '70vw'
           canvas.style.width = '70vw'
           canvas.style.maxWidth = '20em'
           canvas.style.maxHeight = '20em'
-          const logo = new Image()
-          logo.src = '/icon.png'
-          logo.addEventListener('load', () => {
-            const actualCanvasWidth = canvas.width
-            const actualCanvasHeight = canvas.height
-            const logoDiameter = actualCanvasWidth * (15 / 70)
-
-            const logoWidth = logoDiameter
-            const logoHeight = logoDiameter
-
-            const startX = (actualCanvasWidth / 2) - (logoWidth / 2)
-            const startY = (actualCanvasHeight / 2) - (logoHeight / 2)
-
-            ctx.beginPath()
-            const rad = logoDiameter / 2
-            ctx.arc(actualCanvasWidth / 2, actualCanvasHeight / 2, rad, 0, Math.PI * 2, false)
-            ctx.fillStyle = '#FFFFFF'
-            ctx.fill()
-
-            ctx.drawImage(logo, startX, startY, logoWidth, logoHeight)
-            this.qrLoading = false
-          })
         },
       },
       /** コメントダイアログが開いたらコメントを取得 */
@@ -1607,6 +1586,12 @@ div(style="height: 100%; width: 100%")
         } else if (this.claimOwnershipDialog) {
           /** 所有権移転確認ダイアログを閉じる */
           this.claimOwnershipDialog = false
+        } else if (this.mapQrDialog) {
+          /** QRコードダイアログを閉じる */
+          this.mapQrDialog = false
+        } else if (this.commentDialog) {
+          /** コメントダイアログを閉じる */
+          this.commentDialog = false
         } else if (this.optionsDialog) {
           /** オプションダイアログを閉じる */
           this.optionsDialog = false
@@ -1685,6 +1670,10 @@ div(style="height: 100%; width: 100%")
         } else {
           this.fetchMapFromServer(hasLocalData)
         }
+      }
+      // お気に入り状態を取得
+      if (!this.myProfile.guest && this.params && this.params !== 'create') {
+        this.fetchFavoriteStatus()
       }
     },
     unmounted () {
@@ -2229,8 +2218,60 @@ div(style="height: 100%; width: 100%")
           this.fetchMapLoading = false
         }
       },
+      /** お気に入り状態を取得する */
+      async fetchFavoriteStatus () {
+        const res = await this.sendAjaxWithAuth('/getFavorites.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, null, false) as any
+        if (res && res.body && res.body.status === 'ok') {
+          this.isFavorite = res.body.favorites.some((f: any) => f.serverId === this.params)
+        }
+      },
+      /** お気に入りをトグルする */
+      async toggleFavorite () {
+        if (this.myProfile.guest) return
+        const res = await this.sendAjaxWithAuth('/favoriteMap.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, { serverId: this.mapData.serverId }) as any
+        if (res && res.body && res.body.status === 'ok') {
+          this.isFavorite = res.body.action === 'added'
+        }
+      },
+      /** コメント一覧を取得する */
+      async fetchComments () {
+        if (!this.params || this.params === 'create') return
+        this.commentsLoading = true
+        const res = await this.sendAjaxWithAuth('/getComments.php', {
+          serverId: this.params,
+        }, null, false) as any
+        if (res && res.body && res.body.status === 'ok') {
+          this.comments = res.body.comments
+        }
+        this.commentsLoading = false
+      },
+      /** コメントを送信する */
+      async submitComment () {
+        const nospaceComment = this.newComment?.trim()
+        if (!nospaceComment) {
+          Toast.show({ text: 'コメントを入力してください。' })
+          return
+        }
+        if (!this.newComment || this.myProfile.guest) return
+        this.commentLoading = true
+        const res = await this.sendAjaxWithAuth('/addComment.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, { serverId: this.mapData.serverId, comment: this.newComment }) as any
+        if (res && res.body && res.body.status === 'ok') {
+          this.newComment = ''
+          await this.fetchComments()
+        }
+        this.commentLoading = false
+      },
     },
-  }
+  })
 </script>
 
 <style lang="scss" scoped>
