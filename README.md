@@ -305,27 +305,6 @@ cd android && ./gradlew assembleDebug
 
 ---
 
-## バックグラウンドサービスについて
-
-このアプリはバックグラウンドでの継続的な位置情報取得のため、Androidネイティブのフォアグラウンドサービスを実装しています。
-
-### 実装内容
-
-| クラス | 役割 |
-| --- | --- |
-| `LocationForegroundService` | 位置情報の継続取得・永続通知の表示 |
-| `ServiceRestartReceiver` | タスクキル・デバイス再起動時のサービス自動再起動 |
-| `MainActivity` | アプリ起動時のサービス開始・権限リクエスト |
-| `PermissionUtils` | 位置情報権限チェックのユーティリティ |
-
-### 必要な権限
-
-- `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_LOCATION`: フォアグラウンドサービス実行
-- `ACCESS_FINE_LOCATION` / `ACCESS_BACKGROUND_LOCATION`: 位置情報取得
-- `RECEIVE_BOOT_COMPLETED`: デバイス起動時の自動起動
-- `SCHEDULE_EXACT_ALARM`: 正確なタイマーによる再起動スケジュール
-- `POST_NOTIFICATIONS`: 通知表示（Android 13以降）
-
 ### 制限事項
 
 - Android 13（API 33）以降では、通知ドロワーの「停止」ボタンでサービスを強制終了できます（システム仕様のため回避不可）
@@ -382,6 +361,6 @@ Map Studioは、地図に自由に路線図・道路・ピンを描いて遊べ�
 ・バックグラウンドでの位置情報取得
 
 【対応環境】
-AndroidアプリとWeb版（https://map.enoki.xyz）の両方でご利用いただけます。アカウントを作成することで、複数端末での同期や友達とのデータ共有が可能になります。未ログインでも地図の作成・閲覧はお楽しみいただけます。
+AndroidアプリとWeb版（ https://map.enoki.xyz ）の両方でご利用いただけます。アカウントを作成することで、複数端末での同期や友達とのデータ共有が可能になります。未ログインでも地図の作成・閲覧はお楽しみいただけます。
 
 © 2025 エノキ電気
