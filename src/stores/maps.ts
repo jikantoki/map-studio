@@ -18,6 +18,8 @@ export type Map = {
   ownerUserId: string
   /** 地点リスト */
   points: {
+    /** 差分マージ用一意ID */
+    id?: string
     /** 地点の名前 */
     name: string | undefined
     /** 地点の説明 */
@@ -35,6 +37,8 @@ export type Map = {
   }[]
   /** 線リスト */
   lines: {
+    /** 差分マージ用一意ID */
+    id?: string
     /** 線の名前 */
     name: string | undefined
     /** 線の説明 */

@@ -5,6 +5,83 @@ require_once DIR_ROOT . '/php/myAutoLoad.php'; //自動読み込み
 require_once DIR_ROOT . '/php/functions/authAPIforUse.php'; //APIが有効かどうか自動判定
 require_once DIR_ROOT . '/php/functions/authAccountforUse.php'; //ログイン状態が有効かどうか判定（ゲスト不可）
 
+/**
+ * ポイント/ラインのリストを3方向マージする
+ *
+ * base:   クライアントが最後にサーバーから取得した状態
+ * local:  クライアントの現在の状態（編集後）
+ * server: サーバーの現在の状態
+ *
+ * ルール:
+ * - ローカルが追加したもの（baseにない）→ 採用
+ * - ローカルが削除したもの（baseにあってlocalにない）→ 除外
+ * - ローカルが変更・維持したもの → ローカル版を採用（last-write-wins per item）
+ * - 別ユーザーがサーバーに追加したもの（baseにもlocalにもない）→ 保持
+ * - IDを持たないアイテム（後方互換）→ ローカルのものをそのまま採用
+ *
+ * @param array $base
+ * @param array $local
+ * @param array $server
+ * @return array マージ後のリスト
+ */
+function mergeMapItems(array $base, array $local, array $server): array {
+  $baseById = [];
+  foreach ($base as $item) {
+    if (!empty($item['id'])) $baseById[$item['id']] = $item;
+  }
+  $localById = [];
+  $localNoId = [];
+  foreach ($local as $item) {
+    if (!empty($item['id'])) $localById[$item['id']] = $item;
+    else $localNoId[] = $item;
+  }
+  $serverById = [];
+  $serverNoId = [];
+  foreach ($server as $item) {
+    if (!empty($item['id'])) $serverById[$item['id']] = $item;
+    else $serverNoId[] = $item;
+  }
+
+  $allIds = array_unique(array_merge(
+    array_keys($baseById),
+    array_keys($localById),
+    array_keys($serverById)
+  ));
+
+  $result = [];
+  foreach ($allIds as $id) {
+    $inBase   = isset($baseById[$id]);
+    $inLocal  = isset($localById[$id]);
+    $inServer = isset($serverById[$id]);
+
+    if (!$inBase && $inLocal) {
+      // ローカルが追加 → 採用
+      $result[] = $localById[$id];
+    } elseif ($inBase && !$inLocal) {
+      // ローカルが削除 → 除外（サーバー側に残っていても削除扱い）
+    } elseif ($inBase && $inLocal) {
+      // ローカルで変更または維持 → ローカル版を採用
+      $result[] = $localById[$id];
+    } elseif (!$inBase && !$inLocal && $inServer) {
+      // 別ユーザーがサーバーに追加したもの → 保持
+      $result[] = $serverById[$id];
+    }
+  }
+
+  // IDなしのローカルアイテム（後方互換）はそのまま追加
+  foreach ($localNoId as $item) {
+    $result[] = $item;
+  }
+  // IDなしのサーバーアイテムはローカルにIDなしアイテムがない場合のみ保持
+  if (empty($localNoId)) {
+    foreach ($serverNoId as $item) {
+      $result[] = $item;
+    }
+  }
+
+  return $result;
+}
+
 // マップデータの受け取り
 if (!isset($_POST['mapData'])) {
   echo json_encode([
@@ -80,9 +157,29 @@ $editorUserIds = '';
 if (is_array($mapData['editorUserIds'] ?? null)) {
   $editorUserIds = implode(',', array_filter(array_map('trim', array_map('strval', $mapData['editorUserIds']))));
 }
-$pointsList = json_encode($mapData['points'] ?? []);
-$linesList = json_encode($mapData['lines'] ?? []);
-// ペイロードサイズ制限（各1MB）
+
+// baseDataが提供されていれば差分マージを実行
+$baseMapData = null;
+if (isset($_POST['baseData'])) {
+  $decoded = json_decode($_POST['baseData'], true);
+  if (is_array($decoded)) $baseMapData = $decoded;
+}
+
+$wasMerged = false;
+$mergedPoints = $mapData['points'] ?? [];
+$mergedLines  = $mapData['lines'] ?? [];
+
+if ($existingMap && $baseMapData !== null) {
+  $serverPoints = json_decode($existingMap['pointsList'] ?? '[]', true) ?: [];
+  $serverLines  = json_decode($existingMap['linesList']  ?? '[]', true) ?: [];
+  $mergedPoints = mergeMapItems($baseMapData['points'] ?? [], $mapData['points'] ?? [], $serverPoints);
+  $mergedLines  = mergeMapItems($baseMapData['lines']  ?? [], $mapData['lines']  ?? [], $serverLines);
+  $wasMerged    = true;
+}
+
+$pointsList = json_encode($mergedPoints);
+$linesList  = json_encode($mergedLines);
+// ペイロードサイズ制限（マージ後の最終データで確認・各1MB）
 if (strlen($pointsList) > 1_000_000 || strlen($linesList) > 1_000_000) {
   echo json_encode([
     'status' => 'invalid',
@@ -138,5 +235,8 @@ if ($existingMap) {
 echo json_encode([
   'status' => 'ok',
   'reason' => 'map uploaded successfully',
-  'serverId' => $serverId
+  'serverId' => $serverId,
+  'wasMerged' => $wasMerged,
+  'points' => $wasMerged ? $mergedPoints : null,
+  'lines'  => $wasMerged ? $mergedLines  : null,
 ]);

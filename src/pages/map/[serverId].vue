@@ -1220,6 +1220,8 @@ div(style="height: 100%; width: 100%")
         serverIdConflict: false,
         /** 所有権移転確認ダイアログ表示フラグ */
         claimOwnershipDialog: false,
+        /** 差分マージ用ベースデータ（最後にサーバーと同期した状態） */
+        serverBaseData: null as Map | null,
       }
     },
     computed: {
@@ -1575,6 +1577,7 @@ div(style="height: 100%; width: 100%")
         }
 
         this.mapData.points.push({
+          id: this.generateId(),
           latlng: [latlng.lat, latlng.lng],
           name: this.lastPointStyle?.iconName ?? `新しい地点${this.mapData.points.length + 1}`,
           description: this.lastPointStyle?.iconDescription,
@@ -1679,6 +1682,7 @@ div(style="height: 100%; width: 100%")
           this.mapData.lines = []
         }
         this.mapData.lines.push({
+          id: this.generateId(),
           waypoints: this.drawingLine.waypoints,
           color: this.lastLineStyle?.color ?? '#3388ff',
           width: this.lastLineStyle?.width ?? 4,
@@ -1710,6 +1714,7 @@ div(style="height: 100%; width: 100%")
         const lng: number = target.latlng[1]
         const lngOffset = DUPLICATE_OFFSET_METERS / (METERS_PER_DEGREE_AT_EQUATOR * Math.cos(lat * Math.PI / 180))
         this.mapData.points.push({
+          id: this.generateId(),
           latlng: [lat, lng + lngOffset],
           name: target.name,
           description: target.description,
@@ -1928,6 +1933,17 @@ div(style="height: 100%; width: 100%")
           title: title,
         })
       },
+      /** 差分マージ用のランダムIDを生成（crypto.randomUUID優先） */
+      generateId (): string {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return crypto.randomUUID()
+        }
+        return Math.random().toString(36).slice(2, 10) + Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
+      },
+      /** IDを持っていないアイテムにIDを付与（後方互換・サーバーデータの読み込み時に使用） */
+      ensureItemIds (items: any[]): any[] {
+        return items.map((item: any) => item.id ? item : { ...item, id: this.generateId() })
+      },
       /** 地図をサーバーにアップロードする */
       async uploadMap () {
         if (this.myProfile.guest) {
@@ -1940,14 +1956,26 @@ div(style="height: 100%; width: 100%")
         }
         this.uploadLoading = true
         try {
+          const payload: any = { mapData: JSON.stringify(this.mapData) }
+          // ベースデータがある場合は差分マージ用に送信
+          if (this.serverBaseData) {
+            payload.baseData = JSON.stringify(this.serverBaseData)
+          }
           const res = await this.sendAjaxWithAuth('/uploadMap.php', {
             id: this.myProfile.userId,
             token: this.myProfile.userToken,
-          }, {
-            mapData: JSON.stringify(this.mapData),
-          }, true) as any
+          }, payload, true) as any
           if (res.body.status === 'ok') {
-            Toast.show({ text: 'サーバーにアップロードしました！' })
+            if (res.body.wasMerged) {
+              // サーバーのマージ結果でローカルを更新
+              this.mapData.points = this.ensureItemIds(res.body.points ?? [])
+              this.mapData.lines = this.ensureItemIds(res.body.lines ?? [])
+              Toast.show({ text: '他のユーザーの変更とマージしました！' })
+            } else {
+              Toast.show({ text: 'サーバーにアップロードしました！' })
+            }
+            // ベースデータを最新の状態に更新
+            this.serverBaseData = JSON.parse(JSON.stringify(this.mapData))
           } else {
             Toast.show({ text: res.body.reason ?? 'アップロードに失敗しました。' })
           }
@@ -1977,10 +2005,13 @@ div(style="height: 100%; width: 100%")
           const res = await this.sendAjaxWithAuth('/getMap.php', headers, null, false) as any
           if (res.body.status === 'ok' && res.body.map) {
             const serverMap = res.body.map
+            // IDを持っていないアイテムにIDを付与（後方互換）
+            serverMap.points = this.ensureItemIds(serverMap.points ?? [])
+            serverMap.lines = this.ensureItemIds(serverMap.lines ?? [])
             this.mapData = {
               ...serverMap,
-              lines: serverMap.lines ?? [],
-              points: serverMap.points ?? [],
+              lines: serverMap.lines,
+              points: serverMap.points,
               sharedUserIds: serverMap.sharedUserIds ?? [],
               editorUserIds: serverMap.editorUserIds ?? [],
             }
@@ -1991,6 +2022,8 @@ div(style="height: 100%; width: 100%")
             } else {
               this.maps.maps[idx] = this.mapData
             }
+            // 差分マージ用ベースデータを保存
+            this.serverBaseData = JSON.parse(JSON.stringify(this.mapData))
           }
         } catch (error: any) {
           if (error?.ajaxInfo?.status === 404) {
