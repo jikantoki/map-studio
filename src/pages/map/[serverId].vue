@@ -1120,7 +1120,7 @@ div(style="height: 100%; width: 100%")
       v-card-title この地図のQRコード
       v-card-text
         p.mb-4 以下のURLを共有してください
-        pre.pa-4(style="border-radius: 8px; word-break: break-all;") {{ mapQrUrl }}
+        pre.pa-4(style="border-radius: 8px; word-break: break-all; max-width: calc(100vw - 40px); overflow-x: auto;") {{ mapQrUrl }}
         .canvas-area.my-4(
           style="display: flex; justify-content: center;"
           v-show="!qrLoading"
@@ -1168,6 +1168,7 @@ div(style="height: 100%; width: 100%")
         ) コメントするにはログインが必要です。
         v-progress-linear(v-if="commentsLoading" indeterminate)
         .comments-list(
+          v-show="comments.length"
           style="height: calc(100% - 200px); overflow-y: auto;"
         )
           .comment-item.mb-3(
@@ -1181,6 +1182,11 @@ div(style="height: 100%; width: 100%")
               v-spacer
               span(style="font-size: 0.85em; opacity: 0.7;") {{ new Date(comment.createdAt * 1000).toLocaleString() }}
             p(style="white-space: pre-wrap; word-break: break-word; max-height: 7em; overflow: auto;") {{ comment.comment }}
+        p.text-center.ma-16(
+          v-if="!commentsLoading && comments.length === 0"
+          style="opacity: 0.6;"
+          ) コメントはまだありません
+          .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
         .comment-form.mb-4.mx-2(
           v-if="!myProfile.guest"
           style="position: absolute; bottom: 1em; left: 1em; right: 1em; background-color: rgba(var(--v-theme-surface), 1);"
@@ -1205,7 +1211,6 @@ div(style="height: 100%; width: 100%")
             prepend-icon="mdi-send"
           ) 送信
           .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
-        p.text-center.mt-4(v-if="!commentsLoading && comments.length === 0" style="opacity: 0.6;") コメントはまだありません
 </template>
 
 <script lang="ts">
