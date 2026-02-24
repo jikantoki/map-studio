@@ -5,8 +5,6 @@ require_once DIR_ROOT . '/php/myAutoLoad.php';
 require_once DIR_ROOT . '/php/functions/authAPIforUse.php';
 require_once DIR_ROOT . '/php/functions/authAccountforUse.php';
 
-makeFavoriteTable();
-
 $serverId = $_POST['serverId'] ?? '';
 if (!$serverId) {
   echo json_encode(['status' => 'invalid', 'reason' => 'serverId is required', 'errCode' => 10]);

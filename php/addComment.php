@@ -5,8 +5,6 @@ require_once DIR_ROOT . '/php/myAutoLoad.php';
 require_once DIR_ROOT . '/php/functions/authAPIforUse.php';
 require_once DIR_ROOT . '/php/functions/authAccountforUse.php';
 
-makeCommentTable();
-
 $serverId = $_POST['serverId'] ?? '';
 $comment  = $_POST['comment']  ?? '';
 if (!$serverId || !$comment) {

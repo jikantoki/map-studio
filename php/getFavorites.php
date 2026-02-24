@@ -5,8 +5,6 @@ require_once DIR_ROOT . '/php/myAutoLoad.php';
 require_once DIR_ROOT . '/php/functions/authAPIforUse.php';
 require_once DIR_ROOT . '/php/functions/authAccountforUse.php';
 
-makeFavoriteTable();
-
 $pdo = SQLConnect();
 if (!$pdo) {
   echo json_encode(['status' => 'ng', 'reason' => 'database connection failed', 'errCode' => 500]);

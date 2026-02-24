@@ -4,8 +4,6 @@ require_once './settings.php';
 require_once DIR_ROOT . '/php/myAutoLoad.php';
 require_once DIR_ROOT . '/php/functions/authAPIforUse.php';
 
-makeCommentTable();
-
 $serverId = $_SERVER['HTTP_SERVERID'] ?? '';
 if (!$serverId) {
   echo json_encode(['status' => 'invalid', 'reason' => 'serverId is required', 'errCode' => 10]);
