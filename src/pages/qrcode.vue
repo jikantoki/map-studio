@@ -4,7 +4,7 @@ v-card(
   :class="settings.hidden.isAndroid15OrHigher ? 'top-android-15-or-higher' : ''"
   )
   v-card-actions
-    p.ml-2(style="font-size: 1.3em") QRで友達を探す
+    p.ml-2(style="font-size: 1.3em") QRで友達/地図を探す
     v-spacer
     v-btn(
       text
@@ -25,6 +25,7 @@ v-card(
         style="width: 100%; height: 100%;z-index: 999;position: absolute;"
       )
     .btns.my-8(
+      v-if="!myProfile.guest"
       style="display: flex; justify-content: center;"
     )
       v-btn(
@@ -198,8 +199,11 @@ v-dialog(
           const url = new URL(val)
           const pathname = url.pathname
           const userId = pathname.match(/\/user\/([^\/]+)\/?$/)
+          const mapId = pathname.match(/\/map\/([^\/]+)\/?$/)
           if (userId) {
             this.searchFriend(userId[1] ?? '')
+          } else if (mapId) {
+            this.$router.push(`/map/${mapId[1]}`)
           } else {
             throw new Error('謎のURL')
           }
