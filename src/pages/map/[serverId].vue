@@ -272,10 +272,11 @@ div(style="height: 100%; width: 100%")
   //- 編集モードであることを表示
   .edit-mode-indicator(
     v-if="editMode && !drawingLine"
+    style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000;"
     )
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
     p.py-2(
-      style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000; width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
+      style="width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
     ) 編集モード
   //- 線描画中の案内バナー
   .drawing-line-banner(
