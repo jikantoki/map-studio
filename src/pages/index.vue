@@ -10,12 +10,12 @@ v-card(
   v-card-text(style="height: inherit; overflow-y: auto;")
     v-tabs(v-model="activeTab" grow)
       v-tab(value="myMaps") 自分の地図
-      v-tab(value="publicMaps") 公開地図
+      v-tab(value="publicMaps") みんなの地図
     //- 自分の地図タブ
     v-window(v-model="activeTab")
       v-window-item(value="myMaps")
         .content
-          p {{ maps.maps.length }}件の地図があります
+          p.mt-4 {{ maps.maps.length }}件の地図があります
           .map-card(
             v-for="map in maps.maps"
             :key="map.serverId"
