@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- ホスト: localhost
--- 生成日時: 2026 年 2 月 24 日 04:12
+-- 生成日時: 2026 年 2 月 23 日 14:18
 -- サーバのバージョン： 5.7.44-log
 -- PHP のバージョン: 7.4.33
 
@@ -99,35 +99,6 @@ CREATE TABLE `mapList` (
   `pointsList` text NOT NULL COMMENT '地点リストJSON',
   `linesList` text NOT NULL COMMENT '線リストJSON'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地図情報リスト';
-
--- --------------------------------------------------------
-
---
--- テーブルの構造 `map_comment_list`
---
-
-CREATE TABLE `map_comment_list` (
-  `id` int(11) NOT NULL,
-  `randUserId` varchar(64) DEFAULT NULL,
-  `serverId` varchar(255) DEFAULT NULL,
-  `comment` text,
-  `createdAt` int(11) DEFAULT NULL,
-  `ipAddress` varchar(45) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地図のコメントリスト';
-
--- --------------------------------------------------------
-
---
--- テーブルの構造 `map_favorite_list`
---
-
-CREATE TABLE `map_favorite_list` (
-  `id` int(11) NOT NULL,
-  `randUserId` varchar(64) DEFAULT NULL,
-  `serverId` varchar(255) DEFAULT NULL,
-  `createdAt` int(11) DEFAULT NULL,
-  `ipAddress` varchar(45) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地図のお気に入りリスト';
 
 -- --------------------------------------------------------
 
@@ -327,18 +298,6 @@ ALTER TABLE `mapList`
   ADD PRIMARY KEY (`randServerId`);
 
 --
--- テーブルのインデックス `map_comment_list`
---
-ALTER TABLE `map_comment_list`
-  ADD PRIMARY KEY (`id`);
-
---
--- テーブルのインデックス `map_favorite_list`
---
-ALTER TABLE `map_favorite_list`
-  ADD PRIMARY KEY (`id`);
-
---
 -- テーブルのインデックス `push_token_list`
 --
 ALTER TABLE `push_token_list`
@@ -374,20 +333,4 @@ ALTER TABLE `user_profile_list`
 --
 ALTER TABLE `user_secret_list`
   ADD PRIMARY KEY (`secretId`);
-
---
--- ダンプしたテーブルの AUTO_INCREMENT
---
-
---
--- テーブルの AUTO_INCREMENT `map_comment_list`
---
-ALTER TABLE `map_comment_list`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- テーブルの AUTO_INCREMENT `map_favorite_list`
---
-ALTER TABLE `map_favorite_list`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 COMMIT;
