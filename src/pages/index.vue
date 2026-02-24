@@ -10,6 +10,7 @@ v-card(
   v-card-text(style="height: inherit; overflow-y: auto;")
     v-tabs(v-model="activeTab" grow)
       v-tab(value="myMaps") 自分の地図
+      v-tab(value="favorites") お気に入り
       v-tab(value="publicMaps") みんなの地図
     //- 自分の地図タブ
     v-window(v-model="activeTab")
@@ -19,22 +20,31 @@ v-card(
           .map-card(
             v-for="map in maps.maps"
             :key="map.serverId"
-            @click="$router.push(`/map/${map.serverId}`)"
             v-ripple
             style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px;"
           )
-            .map-icon
+            .map-icon(@click="$router.push(`/map/${map.serverId}`)")
               img(
                 :src="map.icon ?? '/icons/map.png'"
                 style="width: 4em; height: 4em; object-fit: cover; border-radius: 12px; background-color: white;"
                 onerror="this.src='/icons/map.png'"
               )
-            .map-info
+            .map-info(@click="$router.push(`/map/${map.serverId}`)" style="flex: 1;")
               p.name-space {{ map.name }}
               p サーバーID: {{ map.serverId }}
               p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
               p {{ map.isPublic ? '公開' : '非公開' }} {{ map.ownerUserId === myProfile.userId ? '（あなたの地図）' : `@${map.ownerUserId}が作成` }}
               p {{ map.description && map.description.length ? map.description : '説明はありません' }}
+            v-btn(
+              icon
+              variant="text"
+              @click.stop
+            )
+              v-icon mdi-dots-vertical
+              v-menu(activator="parent")
+                v-list
+                  v-list-item(@click="toggleFavoriteFromList(map.serverId)")
+                    v-list-item-title {{ favoriteIds.includes(map.serverId) ? 'お気に入りから削除' : 'お気に入りに追加' }}
         .content(
           v-else
           style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;"
@@ -47,6 +57,42 @@ v-card(
           p Map Studioへようこそ！地図を作成して友達と共有したり、みんなの地図を見たりできます。
           .mt-4
           p まだ地図がありません。右下のボタンから地図を作成してみましょう！
+      //- お気に入りリストタブ
+      v-window-item(value="favorites")
+        .content
+          p.mt-4 {{ favoritesList.length }}件のお気に入りがあります
+          v-progress-linear(v-if="favoritesLoading" indeterminate)
+          .map-card(
+            v-for="map in favoritesList"
+            :key="map.serverId"
+            v-ripple
+            style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px;"
+          )
+            .map-icon(@click="$router.push(`/map/${map.serverId}`)")
+              img(
+                :src="map.icon ?? '/icons/map.png'"
+                style="width: 4em; height: 4em; object-fit: cover; border-radius: 12px; background-color: white;"
+                onerror="this.src='/icons/map.png'"
+              )
+            .map-info(@click="$router.push(`/map/${map.serverId}`)" style="flex: 1;")
+              p.name-space {{ map.name }}
+              p サーバーID: {{ map.serverId }}
+              p {{ `@${map.ownerUserId}が作成` }}
+              p {{ map.description && map.description.length ? map.description : '説明はありません' }}
+            v-btn(
+              icon
+              variant="text"
+              @click.stop
+            )
+              v-icon mdi-heart
+              v-menu(activator="parent")
+                v-list
+                  v-list-item(@click="toggleFavoriteFromList(map.serverId)")
+                    v-list-item-title お気に入りから削除
+          p.mt-8.text-center(
+            v-if="!favoritesLoading && favoritesList.length === 0"
+            style="opacity: 0.6;"
+          ) お気に入りはまだありません
       //- 公開地図タブ
       v-window-item(value="publicMaps")
         .content
@@ -65,22 +111,32 @@ v-card(
           .map-card(
             v-for="map in publicMaps"
             :key="map.serverId"
-            @click="$router.push(`/map/${map.serverId}`)"
             v-ripple
             style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px;"
           )
-            .map-icon
+            .map-icon(@click="$router.push(`/map/${map.serverId}`)")
               img(
                 :src="map.icon ?? '/icons/map.png'"
                 style="width: 4em; height: 4em; object-fit: cover; border-radius: 12px; background-color: white;"
                 onerror="this.src='/icons/map.png'"
               )
-            .map-info
+            .map-info(@click="$router.push(`/map/${map.serverId}`)" style="flex: 1;")
               p.name-space {{ map.name }}
               p サーバーID: {{ map.serverId }}
               p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
               p {{ `@${map.ownerUserId}が作成` }}
               p {{ map.description && map.description.length ? map.description : '説明はありません' }}
+            v-btn(
+              v-if="!myProfile.guest"
+              icon
+              variant="text"
+              @click.stop
+            )
+              v-icon mdi-dots-vertical
+              v-menu(activator="parent")
+                v-list
+                  v-list-item(@click="toggleFavoriteFromList(map.serverId)")
+                    v-list-item-title {{ favoriteIds.includes(map.serverId) ? 'お気に入りから削除' : 'お気に入りに追加' }}
           .pagination(style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 0.5em; margin-top: 1em;")
             v-btn(
               :disabled="publicMapsPage <= 1"
@@ -361,6 +417,12 @@ v-card(
         publicMapsTotalPages: 1,
         /** 公開地図の読み込み中フラグ */
         publicMapsLoading: false,
+        /** お気に入りリスト */
+        favoritesList: [] as any[],
+        /** お気に入りIDリスト（高速判定用） */
+        favoriteIds: [] as string[],
+        /** お気に入り読み込み中フラグ */
+        favoritesLoading: false,
       }
     },
     computed: {},
@@ -371,11 +433,13 @@ v-card(
           localStorage.setItem('welcomeDialog', String(dialog))
         },
       },
-      /** 公開地図タブに切り替えたら初回取得 */
+      /** タブ切り替え時の処理 */
       activeTab: {
         handler: async function (tab: string) {
           if (tab === 'publicMaps' && this.publicMaps.length === 0) {
             await (this as any).fetchPublicMaps(1)
+          } else if (tab === 'favorites') {
+            await (this as any).fetchFavorites()
           }
         },
       },
@@ -427,6 +491,11 @@ v-card(
           this.$router.back()
         }
       })
+
+      // お気に入りリストを同期（ログイン済みの場合）
+      if (!this.myProfile.guest) {
+        await (this as any).fetchFavorites()
+      }
 
       // 承認していない友達リクエストがあったらポップアップを表示
       const res: any = await this.sendAjaxWithAuth('/getMyFriendList.php', {
@@ -517,6 +586,31 @@ v-card(
           url: content,
           title: title,
         })
+      },
+      /** お気に入りリストを取得 */
+      async fetchFavorites () {
+        if (this.myProfile.guest) return
+        this.favoritesLoading = true
+        const res: any = await this.sendAjaxWithAuth('/getFavorites.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, null, false)
+        if (res && res.body && res.body.status === 'ok') {
+          this.favoritesList = res.body.favorites
+          this.favoriteIds = res.body.favorites.map((f: any) => f.serverId)
+        }
+        this.favoritesLoading = false
+      },
+      /** お気に入りをトグルする */
+      async toggleFavoriteFromList (serverId: string) {
+        if (this.myProfile.guest) return
+        const res: any = await this.sendAjaxWithAuth('/favoriteMap.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, { serverId })
+        if (res && res.body && res.body.status === 'ok') {
+          await (this as any).fetchFavorites()
+        }
       },
       /** 公開地図を取得 */
       async fetchPublicMaps (page: number) {

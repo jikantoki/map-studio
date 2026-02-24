@@ -747,3 +747,32 @@ function getProfile($id)
 {
   return SQLfind('USER_PROFILE_VIEW', 'userId', $id);
 }
+
+/**
+ * お気に入りテーブルを作成（既存の場合はスキップ）
+ */
+function makeFavoriteTable()
+{
+  SQLcreateTable('map_favorite_list', [
+    'id' => 'int NOT NULL AUTO_INCREMENT PRIMARY KEY',
+    'randUserId' => 'varchar(64)',
+    'serverId' => 'varchar(255)',
+    'createdAt' => 'int',
+    'ipAddress' => 'varchar(45)'
+  ]);
+}
+
+/**
+ * コメントテーブルを作成（既存の場合はスキップ）
+ */
+function makeCommentTable()
+{
+  SQLcreateTable('map_comment_list', [
+    'id' => 'int NOT NULL AUTO_INCREMENT PRIMARY KEY',
+    'randUserId' => 'varchar(64)',
+    'serverId' => 'varchar(255)',
+    'comment' => 'text',
+    'createdAt' => 'int',
+    'ipAddress' => 'varchar(45)'
+  ]);
+}
