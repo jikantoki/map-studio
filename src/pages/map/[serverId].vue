@@ -1091,6 +1091,101 @@ div(style="height: 100%; width: 100%")
             @click="claimOwnershipAndSave"
             prepend-icon="mdi-account-check"
           ) 所有権を取得してアップロード
+  //- QRコードダイアログ
+  v-dialog(
+    v-model="mapQrDialog"
+    max-width="400"
+  )
+    v-card
+      v-card-title この地図のQRコード
+      v-card-text
+        p.mb-4 以下のURLを共有してください
+        pre.pa-4(style="border-radius: 8px; word-break: break-all;") {{ mapQrUrl }}
+        .canvas-area.my-4(
+          style="display: flex; justify-content: center;"
+          v-show="!qrLoading"
+          )
+          canvas#map-qr-canvas(style="border-radius: 10%; max-width: 20em; max-height: 20em;")
+        .qr-loading.my-4(
+          v-show="qrLoading"
+          style="display: flex; justify-content: center; width: 70vw; height: 70vw; max-width: 20em; max-height: 20em; background-color: white; border-radius: 10%; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-self: center;"
+        )
+          v-progress-circular.my-4(
+            indeterminate
+            :size="64"
+            color="black"
+            )
+          p.my-4(
+            style="color: black;"
+          ) QRコード読み込み中…
+      v-card-actions
+        v-btn(
+          @click="share(mapQrUrl, mapData.name)"
+          prepend-icon="mdi-share-variant"
+          style="background-color: rgb(var(--v-theme-primary)); color: white;"
+        ) 共有
+        v-spacer
+        v-btn(@click="mapQrDialog = false" prepend-icon="mdi-close") 閉じる
+  //- コメントダイアログ
+  v-dialog(
+    v-model="commentDialog"
+    transition="dialog-bottom-transition"
+    fullscreen
+  )
+    v-card(style="width: 100%; height: 100%;")
+      .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+      v-card-actions
+        p.ml-2(style="font-size: 1.3em") コメント
+        v-spacer
+        v-btn(text @click="commentDialog = false" icon="mdi-close")
+      v-card-text(
+        style="height: calc(100% - 8em); overflow: hidden; position: relative;"
+        )
+        v-alert.mb-4(
+          v-if="myProfile.guest"
+          type="info"
+          variant="outlined"
+        ) コメントするにはログインが必要です。
+        v-progress-linear(v-if="commentsLoading" indeterminate)
+        .comments-list(
+          style="height: calc(100% - 200px); overflow-y: auto;"
+        )
+          .comment-item.mb-3(
+            v-for="comment in comments"
+            :key="comment.id"
+            style="padding: 1em; border-radius: 12px; background-color: rgba(var(--v-theme-surface-variant), 0.5);"
+          )
+            .comment-header(style="display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.5em;")
+              v-icon(size="small") mdi-account
+              span(style="font-weight: 500;") {{ comment.userId }}
+              v-spacer
+              span(style="font-size: 0.85em; opacity: 0.7;") {{ new Date(comment.createdAt * 1000).toLocaleString() }}
+            p(style="white-space: pre-wrap; word-break: break-word; max-height: 7em; overflow: auto;") {{ comment.comment }}
+        .comment-form.mb-4.mx-2(
+          v-if="!myProfile.guest"
+          style="position: absolute; bottom: 1em; left: 1em; right: 1em; background-color: rgba(var(--v-theme-surface), 1);"
+          )
+          v-textarea.mb-2(
+            v-model="newComment"
+            label="コメントを入力"
+            placeholder="例: この場所はとても良かったです！"
+            variant="outlined"
+            auto-grow
+            rows="2"
+            max-rows="5"
+            :counter="1000"
+            clearable
+            @keydown.ctrl.enter="submitComment"
+          )
+          v-btn(
+            :disabled="!newComment || newComment.length === 0 || newComment.length > 1000 || commentLoading"
+            :loading="commentLoading"
+            @click="submitComment"
+            style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
+            prepend-icon="mdi-send"
+          ) 送信
+          .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+        p.text-center.mt-4(v-if="!commentsLoading && comments.length === 0" style="opacity: 0.6;") コメントはまだありません
 </template>
 
 <script lang="ts">
@@ -1246,6 +1341,24 @@ div(style="height: 100%; width: 100%")
         serverBaseData: null as Map | null,
         /** 地図データがローカルにもサーバーにも存在しない */
         mapNotFound: false,
+        /** お気に入り状態 */
+        isFavorite: false,
+        /** QRコードダイアログの表示フラグ */
+        mapQrDialog: false,
+        /** QRコードのURL */
+        mapQrUrl: '',
+        /** コメントダイアログの表示フラグ */
+        commentDialog: false,
+        /** コメント一覧 */
+        comments: [] as { id: number, userId: string, comment: string, createdAt: number }[],
+        /** コメント読み込み中フラグ */
+        commentsLoading: false,
+        /** 新規コメント入力 */
+        newComment: '',
+        /** コメント送信中フラグ */
+        commentLoading: false,
+        /** QRコード読み込み中フラグ */
+        qrLoading: false,
       }
     },
     computed: {
@@ -1361,6 +1474,54 @@ div(style="height: 100%; width: 100%")
         handler: async function (dialog: boolean) {
           localStorage.setItem('welcomeDialog', String(dialog))
         },
+      },
+      /** QRコードダイアログが開いたらQRコードを生成 */
+      mapQrDialog: {
+        handler: async function (val: boolean) {
+          this.qrLoading = true
+          if (!val) return
+          const host = window.location.host
+          this.mapQrUrl = `https://${host}/map/${this.mapData.serverId}`
+          await this.$nextTick()
+          const canvas = document.querySelector('#map-qr-canvas') as HTMLCanvasElement | null
+          if (!canvas) return
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return false
+          const QRCode = (await import('qrcode')).default
+          QRCode.toCanvas(canvas, this.mapQrUrl, { scale: 10 })
+          canvas.style.height = '70vw'
+          canvas.style.width = '70vw'
+          canvas.style.maxWidth = '20em'
+          canvas.style.maxHeight = '20em'
+          const logo = new Image()
+          logo.src = '/icon.png'
+          logo.addEventListener('load', () => {
+            const actualCanvasWidth = canvas.width
+            const actualCanvasHeight = canvas.height
+            const logoDiameter = actualCanvasWidth * (15 / 70)
+
+            const logoWidth = logoDiameter
+            const logoHeight = logoDiameter
+
+            const startX = (actualCanvasWidth / 2) - (logoWidth / 2)
+            const startY = (actualCanvasHeight / 2) - (logoHeight / 2)
+
+            ctx.beginPath()
+            const rad = logoDiameter / 2
+            ctx.arc(actualCanvasWidth / 2, actualCanvasHeight / 2, rad, 0, Math.PI * 2, false)
+            ctx.fillStyle = '#FFFFFF'
+            ctx.fill()
+
+            ctx.drawImage(logo, startX, startY, logoWidth, logoHeight)
+            this.qrLoading = false
+          })
+        },
+      },
+      /** コメントダイアログが開いたらコメントを取得 */
+      async commentDialog (val: boolean) {
+        if (val) {
+          await this.fetchComments()
+        }
       },
       /** 編集モードがオフになったときに、詳細カードのターゲットをリセットする */
       editMode (newEditMode) {
