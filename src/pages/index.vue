@@ -12,7 +12,10 @@ v-card(
       v-tab(value="myMaps") 自分の地図
       v-tab(value="publicMaps") みんなの地図
     //- 自分の地図タブ
-    v-window(v-model="activeTab")
+    v-window(
+      v-model="activeTab"
+      style="height: calc(100vh - 200px);"
+      )
       v-window-item(value="myMaps")
         .content(v-if="maps.maps.length")
           p.mt-4 {{ maps.maps.length }}件の地図があります
