@@ -8,29 +8,81 @@ v-card(
       p Map Studio
     v-spacer
   v-card-text(style="height: inherit; overflow-y: auto;")
-    //- 閲覧権限のある地図のリスト
-    p サーバーリスト
-    .content
-      p {{ maps.maps.length }}件の地図があります
-      .map-card(
-        v-for="map in maps.maps"
-        :key="map.serverId"
-        @click="$router.push(`/map/${map.serverId}`)"
-        v-ripple
-        style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px;"
-      )
-        .map-icon
-          img(
-            :src="map.icon ?? '/icons/map.png'"
-            style="width: 4em; height: 4em; object-fit: cover; border-radius: 12px; background-color: white;"
-            onerror="this.src='/icons/map.png'"
+    v-tabs(v-model="activeTab" grow)
+      v-tab(value="myMaps") 自分の地図
+      v-tab(value="publicMaps") 公開地図
+    //- 自分の地図タブ
+    v-window(v-model="activeTab")
+      v-window-item(value="myMaps")
+        .content
+          p {{ maps.maps.length }}件の地図があります
+          .map-card(
+            v-for="map in maps.maps"
+            :key="map.serverId"
+            @click="$router.push(`/map/${map.serverId}`)"
+            v-ripple
+            style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px;"
           )
-        .map-info
-          p.name-space {{ map.name }}
-          p サーバーID: {{ map.serverId }}
-          p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
-          p {{ map.isPublic ? '公開' : '非公開' }} {{ map.ownerUserId === myProfile.userId ? '（あなたの地図）' : `@${map.ownerUserId}が作成` }}
-          p {{ map.description.length ? map.description : '説明はありません' }}
+            .map-icon
+              img(
+                :src="map.icon ?? '/icons/map.png'"
+                style="width: 4em; height: 4em; object-fit: cover; border-radius: 12px; background-color: white;"
+                onerror="this.src='/icons/map.png'"
+              )
+            .map-info
+              p.name-space {{ map.name }}
+              p サーバーID: {{ map.serverId }}
+              p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
+              p {{ map.isPublic ? '公開' : '非公開' }} {{ map.ownerUserId === myProfile.userId ? '（あなたの地図）' : `@${map.ownerUserId}が作成` }}
+              p {{ map.description && map.description.length ? map.description : '説明はありません' }}
+      //- 公開地図タブ
+      v-window-item(value="publicMaps")
+        .content
+          v-text-field(
+            v-model="publicMapSearch"
+            label="サーバー名・説明で検索"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+            hide-details
+            style="margin-bottom: 1em;"
+            @keydown.enter="fetchPublicMaps(1)"
+            @click:clear="publicMapSearch = ''; fetchPublicMaps(1)"
+          )
+          p(style="margin-bottom: 0.5em;") {{ publicMapsTotalCount }}件の公開地図があります
+          v-progress-linear(v-if="publicMapsLoading" indeterminate)
+          .map-card(
+            v-for="map in publicMaps"
+            :key="map.serverId"
+            @click="$router.push(`/map/${map.serverId}`)"
+            v-ripple
+            style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px;"
+          )
+            .map-icon
+              img(
+                :src="map.icon ?? '/icons/map.png'"
+                style="width: 4em; height: 4em; object-fit: cover; border-radius: 12px; background-color: white;"
+                onerror="this.src='/icons/map.png'"
+              )
+            .map-info
+              p.name-space {{ map.name }}
+              p サーバーID: {{ map.serverId }}
+              p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
+              p {{ `@${map.ownerUserId}が作成` }}
+              p {{ map.description && map.description.length ? map.description : '説明はありません' }}
+          .pagination(style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 0.5em; margin-top: 1em;")
+            v-btn(
+              :disabled="publicMapsPage <= 1"
+              icon
+              @click="fetchPublicMaps(publicMapsPage - 1)"
+            )
+              v-icon mdi-chevron-left
+            span {{ publicMapsPage }} / {{ publicMapsTotalPages }}
+            v-btn(
+              :disabled="publicMapsPage >= publicMapsTotalPages"
+              icon
+              @click="fetchPublicMaps(publicMapsPage + 1)"
+            )
+              v-icon mdi-chevron-right
   //-- 下部のアクションバー --
   .action-bar
     .buttons
@@ -283,6 +335,20 @@ v-card(
         maps: useMapsStore(),
         /** 地図作成ダイアログ */
         mapCreateDialog: false,
+        /** アクティブタブ */
+        activeTab: 'myMaps',
+        /** 公開地図リスト */
+        publicMaps: [] as any[],
+        /** 公開地図の検索キーワード */
+        publicMapSearch: '',
+        /** 公開地図の現在ページ */
+        publicMapsPage: 1,
+        /** 公開地図の総件数 */
+        publicMapsTotalCount: 0,
+        /** 公開地図の総ページ数 */
+        publicMapsTotalPages: 1,
+        /** 公開地図の読み込み中フラグ */
+        publicMapsLoading: false,
       }
     },
     computed: {},
@@ -291,6 +357,14 @@ v-card(
       optionsDialog: {
         handler: async function (dialog: boolean) {
           localStorage.setItem('welcomeDialog', String(dialog))
+        },
+      },
+      /** 公開地図タブに切り替えたら初回取得 */
+      activeTab: {
+        handler: async function (tab: string) {
+          if (tab === 'publicMaps' && this.publicMaps.length === 0) {
+            await (this as any).fetchPublicMaps(1)
+          }
         },
       },
     },
@@ -431,6 +505,21 @@ v-card(
           url: content,
           title: title,
         })
+      },
+      /** 公開地図を取得 */
+      async fetchPublicMaps (page: number) {
+        this.publicMapsLoading = true
+        this.publicMapsPage = page
+        const res: any = await this.sendAjaxWithAuth('/getPublicMaps.php', {
+          page: String(page),
+          search: this.publicMapSearch ?? '',
+        })
+        if (res && res.body && res.body.status === 'ok') {
+          this.publicMaps = res.body.maps
+          this.publicMapsTotalCount = res.body.totalCount
+          this.publicMapsTotalPages = res.body.totalPages || 1
+        }
+        this.publicMapsLoading = false
       },
     },
   }
