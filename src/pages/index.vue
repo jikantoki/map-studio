@@ -437,9 +437,9 @@ v-card(
       activeTab: {
         handler: async function (tab: string) {
           if (tab === 'publicMaps' && this.publicMaps.length === 0) {
-            await (this as any).fetchPublicMaps(1)
+            await this.fetchPublicMaps(1)
           } else if (tab === 'favorites') {
-            await (this as any).fetchFavorites()
+            await this.fetchFavorites()
           }
         },
       },
@@ -494,7 +494,7 @@ v-card(
 
       // お気に入りリストを同期（ログイン済みの場合）
       if (!this.myProfile.guest) {
-        await (this as any).fetchFavorites()
+        await this.fetchFavorites()
       }
 
       // 承認していない友達リクエストがあったらポップアップを表示
@@ -609,7 +609,7 @@ v-card(
           token: this.myProfile.userToken,
         }, { serverId })
         if (res && res.body && res.body.status === 'ok') {
-          await (this as any).fetchFavorites()
+          await this.fetchFavorites()
         }
       },
       /** 公開地図を取得 */

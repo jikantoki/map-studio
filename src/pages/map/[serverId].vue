@@ -1663,7 +1663,7 @@ div(style="height: 100%; width: 100%")
       }
       // お気に入り状態を取得
       if (!this.myProfile.guest && this.params && this.params !== 'create') {
-        (this as any).fetchFavoriteStatus()
+        this.fetchFavoriteStatus()
       }
     },
     unmounted () {
