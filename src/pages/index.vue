@@ -52,7 +52,7 @@ v-card(
           v-else
           style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;"
           )
-          h1 ようこそ、{{ myProfile.name ? myProfile.name : 'ゲスト' }}さん！
+          h1 ようこそ、{{ myProfile.name ?? (myProfile.guest ? 'ゲスト' : myProfile.userId) }}さん！
           img.my-4(
             src="/icon.png"
             height="128"
