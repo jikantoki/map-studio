@@ -575,4 +575,11 @@ v-card(
 .opacity05 {
   opacity: 0.7;
 }
+
+.map-card {
+  transition: all 0.3s;
+  &:hover {
+    background-color: rgba(var(--v-theme-primary), 0.1);
+  }
+}
 </style>

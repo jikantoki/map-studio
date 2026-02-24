@@ -272,7 +272,7 @@ div(style="height: 100%; width: 100%")
       v-btn(
         size="x-large"
         icon
-        @click="editMode ? editModeEndDialog = true : $router.back()"
+        @click="editMode ? editModeEndDialog = true : $router.push('/')"
         style="background-color: rgba(var(--v-theme-surface), 0.9);"
         )
         v-icon mdi-arrow-left
