@@ -39,6 +39,11 @@ v-card(
               p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
               p {{ map.isPublic ? '公開' : '非公開' }} {{ map.ownerUserId === myProfile.userId ? '（あなたの地図）' : `@${map.ownerUserId}が作成` }}
               p {{ map.description && map.description.length ? map.description : '説明はありません' }}
+              //- 所有者がguestの場合、データが同期されていないエラーを表示
+              p(
+                v-if="map.ownerUserId === 'guest'"
+                style="color: red; font-weight: bold; background-color: rgba(255, 0, 0, 0.1); padding: 0.5em; border-radius: 8px; margin-top: 0.5em;"
+                ) データが同期されていません
             v-btn(
               icon
               variant="text"
@@ -49,6 +54,7 @@ v-card(
                 v-list
                   v-list-item(@click="toggleFavoriteFromList(map.serverId)")
                     v-list-item-title {{ favoriteIds.includes(map.serverId) ? 'お気に入りから削除' : 'お気に入りに追加' }}
+          .ma-16.pa-8
         .content(
           v-else
           style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;"
