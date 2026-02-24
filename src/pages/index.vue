@@ -14,7 +14,7 @@ v-card(
     //- 自分の地図タブ
     v-window(v-model="activeTab")
       v-window-item(value="myMaps")
-        .content
+        .content(v-if="maps.maps.length")
           p.mt-4 {{ maps.maps.length }}件の地図があります
           .map-card(
             v-for="map in maps.maps"
@@ -35,6 +35,18 @@ v-card(
               p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
               p {{ map.isPublic ? '公開' : '非公開' }} {{ map.ownerUserId === myProfile.userId ? '（あなたの地図）' : `@${map.ownerUserId}が作成` }}
               p {{ map.description && map.description.length ? map.description : '説明はありません' }}
+        .content(
+          v-else
+          style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;"
+          )
+          h1 ようこそ、{{ myProfile.name ? myProfile.name : 'ゲスト' }}さん！
+          img.my-4(
+            src="/icon.png"
+            height="128"
+          )
+          p Map Studioへようこそ！地図を作成して友達と共有したり、みんなの地図を見たりできます。
+          .mt-4
+          p まだ地図がありません。右下のボタンから地図を作成してみましょう！
       //- 公開地図タブ
       v-window-item(value="publicMaps")
         .content
