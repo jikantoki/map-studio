@@ -1,5 +1,39 @@
 <template lang="pug">
 div(style="height: 100%; width: 100%")
+  //- 地図データ取得中ローディングオーバーレイ
+  v-overlay(
+    v-model="fetchMapLoading"
+    contained
+    persistent
+    style="display: flex; align-items: center; justify-content: center;"
+  )
+    v-progress-circular(
+      indeterminate
+      color="primary"
+      size="64"
+    )
+  //- 地図データが見つからない場合のエラー画面
+  .map-not-found(
+    v-if="mapNotFound"
+    style="position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background-color: rgb(var(--v-theme-background));"
+  )
+    .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+    v-card(
+      max-width="400"
+      style="width: 90%; text-align: center;"
+      elevation="0"
+    )
+      v-card-text
+        v-icon(size="80" color="grey-lighten-1") mdi-map-search
+        h2.mt-4(style="font-size: 1.4em; font-weight: 600;") 地図が見つかりません
+        p.mt-2(style="color: rgba(var(--v-theme-on-surface), 0.6);") この地図は存在しないか、非公開に設定されている可能性があります。
+        p(style="color: rgba(var(--v-theme-on-surface), 0.4); font-size: 0.85em;") ID: {{ $route.params.serverId }}
+      v-card-actions(style="justify-content: center;")
+        v-btn(
+          @click="$router.back()"
+          prepend-icon="mdi-arrow-left"
+          style="background-color: rgb(var(--v-theme-primary)); color: white;"
+        ) 前のページに戻る
   LMap(
     :zoom="leaflet.zoom"
     :center="leaflet.center"
@@ -195,6 +229,13 @@ div(style="height: 100%; width: 100%")
         p マップ
       .button(
         v-ripple
+        @click="commentDialog = true"
+        style="opacity: 0.8;"
+        )
+        v-icon mdi-comment-outline
+        p コメント
+      .button(
+        v-ripple
         @click="optionsDialog = true"
         style="opacity: 0.8;"
         )
@@ -238,7 +279,7 @@ div(style="height: 100%; width: 100%")
       v-btn(
         size="x-large"
         icon
-        @click="editMode ? editModeEndDialog = true : $router.back()"
+        @click="editMode ? editModeEndDialog = true : $router.push('/')"
         style="background-color: rgba(var(--v-theme-surface), 0.9);"
         )
         v-icon mdi-arrow-left
@@ -260,10 +301,11 @@ div(style="height: 100%; width: 100%")
   //- 編集モードであることを表示
   .edit-mode-indicator(
     v-if="editMode && !drawingLine"
+    style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000;"
     )
     .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
     p.py-2(
-      style="position: fixed; top: calc(32px - 6px); left: calc(50% - 5em); z-index: 1000; width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
+      style="width: 10em; text-align: center; background-color: rgba(var(--v-theme-primary), 0.9); color: white; border-radius: 9999px; font-size: 1.2em;"
     ) 編集モード
   //- 線描画中の案内バナー
   .drawing-line-banner(
@@ -312,7 +354,7 @@ div(style="height: 100%; width: 100%")
             v-else-if="detailCardTarget.iconImg"
             loading="lazy"
             :src="detailCardTarget.iconImg && detailCardTarget.iconImg.length ? detailCardTarget.iconImg : '/icons/question.png'"
-            style="height: 1.5em; width: 1.5em; border-radius: 9999px;"
+            style="height: 1.5em; min-width: 1.5em;"
             onerror="this.src='/icons/question.png'"
             )
           span {{ editMode ? `${detailCardTarget.name}を編集` : detailCardTarget.name ?? '無題' }}
@@ -591,15 +633,29 @@ div(style="height: 100%; width: 100%")
             style="background-color: rgb(var(--v-theme-primary)); color: white;"
           ) 保存
           hr.my-4
+        v-alert.mb-2(
+          v-if="serverIdConflict"
+          type="warning"
+          variant="outlined"
+          density="compact"
+        ) このサーバーIDは他のユーザーが使用中のため、アップロードできません。別のIDを使用してください。
         v-btn.my-2(
           v-if="isEditorable"
-          :disabled="mapData.serverId === '' || mapData.name === '' || myProfile.guest"
+          :disabled="mapData.serverId === '' || mapData.name === '' || myProfile.guest || serverIdConflict"
+          :loading="uploadLoading"
           text
-          @click="Toast.show({ text: '未実装' })"
+          @click="save"
           append-icon="mdi-upload"
           style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
         ) サーバーにアップロード
         v-list.options-list
+          v-list-item.item(
+            @click="toggleFavorite"
+            v-if="!myProfile.guest"
+            )
+            .icon-and-text
+              v-icon(:color="isFavorite ? 'pink' : ''") {{ isFavorite ? 'mdi-heart' : 'mdi-heart-outline' }}
+              v-list-item-title {{ isFavorite ? 'お気に入りから削除' : 'お気に入りに追加' }}
           v-list-item.item(
             @click="share(`https://map.enoki.xyz/map/${mapData.serverId}`, mapData.name)"
             v-if="!myProfile.guest"
@@ -607,6 +663,12 @@ div(style="height: 100%; width: 100%")
             .icon-and-text
               v-icon mdi-share-variant
               v-list-item-title この地図を共有する
+          v-list-item.item(
+            @click="mapQrDialog = true; optionsDialog = false"
+            )
+            .icon-and-text
+              v-icon mdi-qrcode
+              v-list-item-title この地図のQRコードを表示
   //- 編集モードを終了するか確認するダイアログ --
   v-dialog(
     v-model="editModeEndDialog"
@@ -1023,6 +1085,127 @@ div(style="height: 100%; width: 100%")
       v-card-actions
         v-spacer
         v-btn(@click="iconImgDialog = false") キャンセル
+  //- 所有権移転確認ダイアログ
+  v-dialog(
+    v-model="claimOwnershipDialog"
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") この地図の所有権を取得しますか？
+      v-card-text
+        .text-content
+          p この地図のオーナーがゲストのままです。
+          .my-2
+          p 現在のアカウント（{{ myProfile.userId }}）に所有権を移してサーバーにアップロードするか、ゲストのままローカルにのみ保存するか選択してください。
+      v-card-actions
+        v-spacer
+        .btns(style="display: grid; gap: 8px;")
+          v-btn(
+            text
+            @click="claimOwnershipDialog = false; performLocalSave()"
+            prepend-icon="mdi-content-save"
+          ) ローカルのみ保存
+          v-btn(
+            style="background-color: rgb(var(--v-theme-primary)); color: white"
+            text
+            @click="claimOwnershipAndSave"
+            prepend-icon="mdi-account-check"
+          ) 所有権を取得してアップロード
+  //- QRコードダイアログ
+  v-dialog(
+    v-model="mapQrDialog"
+    max-width="400"
+  )
+    v-card
+      v-card-title この地図のQRコード
+      v-card-text
+        p.mb-4 以下のURLを共有してください
+        pre.pa-4(style="border-radius: 8px; word-break: break-all;") {{ mapQrUrl }}
+        .canvas-area.my-4(
+          style="display: flex; justify-content: center;"
+          v-show="!qrLoading"
+          )
+          canvas#map-qr-canvas(style="border-radius: 10%; max-width: 20em; max-height: 20em;")
+        .qr-loading.my-4(
+          v-show="qrLoading"
+          style="display: flex; justify-content: center; width: 70vw; height: 70vw; max-width: 20em; max-height: 20em; background-color: white; border-radius: 10%; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-self: center;"
+        )
+          v-progress-circular.my-4(
+            indeterminate
+            :size="64"
+            color="black"
+            )
+          p.my-4(
+            style="color: black;"
+          ) QRコード読み込み中…
+      v-card-actions
+        v-btn(
+          @click="share(mapQrUrl, mapData.name)"
+          prepend-icon="mdi-share-variant"
+          style="background-color: rgb(var(--v-theme-primary)); color: white;"
+        ) 共有
+        v-spacer
+        v-btn(@click="mapQrDialog = false" prepend-icon="mdi-close") 閉じる
+  //- コメントダイアログ
+  v-dialog(
+    v-model="commentDialog"
+    transition="dialog-bottom-transition"
+    fullscreen
+  )
+    v-card(style="width: 100%; height: 100%;")
+      .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+      v-card-actions
+        p.ml-2(style="font-size: 1.3em") コメント
+        v-spacer
+        v-btn(text @click="commentDialog = false" icon="mdi-close")
+      v-card-text(
+        style="height: calc(100% - 8em); overflow: hidden; position: relative;"
+        )
+        v-alert.mb-4(
+          v-if="myProfile.guest"
+          type="info"
+          variant="outlined"
+        ) コメントするにはログインが必要です。
+        v-progress-linear(v-if="commentsLoading" indeterminate)
+        .comments-list(
+          style="height: calc(100% - 200px); overflow-y: auto;"
+        )
+          .comment-item.mb-3(
+            v-for="comment in comments"
+            :key="comment.id"
+            style="padding: 1em; border-radius: 12px; background-color: rgba(var(--v-theme-surface-variant), 0.5);"
+          )
+            .comment-header(style="display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.5em;")
+              v-icon(size="small") mdi-account
+              span(style="font-weight: 500;") {{ comment.userId }}
+              v-spacer
+              span(style="font-size: 0.85em; opacity: 0.7;") {{ new Date(comment.createdAt * 1000).toLocaleString() }}
+            p(style="white-space: pre-wrap; word-break: break-word; max-height: 7em; overflow: auto;") {{ comment.comment }}
+        .comment-form.mb-4.mx-2(
+          v-if="!myProfile.guest"
+          style="position: absolute; bottom: 1em; left: 1em; right: 1em; background-color: rgba(var(--v-theme-surface), 1);"
+          )
+          v-textarea.mb-2(
+            v-model="newComment"
+            label="コメントを入力"
+            placeholder="例: この場所はとても良かったです！"
+            variant="outlined"
+            auto-grow
+            rows="2"
+            max-rows="5"
+            :counter="1000"
+            clearable
+            @keydown.ctrl.enter="submitComment"
+          )
+          v-btn(
+            :disabled="!newComment || newComment.length === 0 || newComment.length > 1000 || commentLoading"
+            :loading="commentLoading"
+            @click="submitComment"
+            style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
+            prepend-icon="mdi-send"
+          ) 送信
+          .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+        p.text-center.mt-4(v-if="!commentsLoading && comments.length === 0" style="opacity: 0.6;") コメントはまだありません
 </template>
 
 <script lang="ts">
@@ -1033,6 +1216,7 @@ div(style="height: 100%; width: 100%")
   import { Toast } from '@capacitor/toast'
 
   import { LIcon, LMap, LMarker, LPolyline, LTileLayer } from '@vue-leaflet/vue-leaflet'
+  import { defineComponent } from 'vue'
   import { Icon, Vue3IconPicker } from 'vue3-icon-picker'
   import { iconImages } from '@/js/iconImages'
   import muniArray from '@/js/muni'
@@ -1053,7 +1237,7 @@ div(style="height: 100%; width: 100%")
     latlng: [number, number]
   }
 
-  export default {
+  export default defineComponent({
     components: {
       LMap,
       LMarker,
@@ -1166,6 +1350,36 @@ div(style="height: 100%; width: 100%")
         iconImgDialogTarget: null as 'point' | 'line' | 'waypoint' | null,
         /** 使用可能なアイコン画像リスト */
         iconImages,
+        /** アップロード中フラグ */
+        uploadLoading: false,
+        /** サーバーから地図データ取得中フラグ */
+        fetchMapLoading: false,
+        /** サーバーIDが他のユーザーと競合しているか */
+        serverIdConflict: false,
+        /** 所有権移転確認ダイアログ表示フラグ */
+        claimOwnershipDialog: false,
+        /** 差分マージ用ベースデータ（最後にサーバーと同期した状態） */
+        serverBaseData: null as Map | null,
+        /** 地図データがローカルにもサーバーにも存在しない */
+        mapNotFound: false,
+        /** お気に入り状態 */
+        isFavorite: false,
+        /** QRコードダイアログの表示フラグ */
+        mapQrDialog: false,
+        /** QRコードのURL */
+        mapQrUrl: '',
+        /** コメントダイアログの表示フラグ */
+        commentDialog: false,
+        /** コメント一覧 */
+        comments: [] as { id: number, userId: string, comment: string, createdAt: number }[],
+        /** コメント読み込み中フラグ */
+        commentsLoading: false,
+        /** 新規コメント入力 */
+        newComment: '',
+        /** コメント送信中フラグ */
+        commentLoading: false,
+        /** QRコード読み込み中フラグ */
+        qrLoading: false,
       }
     },
     computed: {
@@ -1282,6 +1496,54 @@ div(style="height: 100%; width: 100%")
           localStorage.setItem('welcomeDialog', String(dialog))
         },
       },
+      /** QRコードダイアログが開いたらQRコードを生成 */
+      mapQrDialog: {
+        handler: async function (val: boolean) {
+          this.qrLoading = true
+          if (!val) return
+          const host = window.location.host
+          this.mapQrUrl = `https://${host}/map/${this.mapData.serverId}`
+          await this.$nextTick()
+          const canvas = document.querySelector('#map-qr-canvas') as HTMLCanvasElement | null
+          if (!canvas) return
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return false
+          const QRCode = (await import('qrcode')).default
+          QRCode.toCanvas(canvas, this.mapQrUrl, { scale: 10 })
+          canvas.style.height = '70vw'
+          canvas.style.width = '70vw'
+          canvas.style.maxWidth = '20em'
+          canvas.style.maxHeight = '20em'
+          const logo = new Image()
+          logo.src = '/icon.png'
+          logo.addEventListener('load', () => {
+            const actualCanvasWidth = canvas.width
+            const actualCanvasHeight = canvas.height
+            const logoDiameter = actualCanvasWidth * (15 / 70)
+
+            const logoWidth = logoDiameter
+            const logoHeight = logoDiameter
+
+            const startX = (actualCanvasWidth / 2) - (logoWidth / 2)
+            const startY = (actualCanvasHeight / 2) - (logoHeight / 2)
+
+            ctx.beginPath()
+            const rad = logoDiameter / 2
+            ctx.arc(actualCanvasWidth / 2, actualCanvasHeight / 2, rad, 0, Math.PI * 2, false)
+            ctx.fillStyle = '#FFFFFF'
+            ctx.fill()
+
+            ctx.drawImage(logo, startX, startY, logoWidth, logoHeight)
+            this.qrLoading = false
+          })
+        },
+      },
+      /** コメントダイアログが開いたらコメントを取得 */
+      async commentDialog (val: boolean) {
+        if (val) {
+          await this.fetchComments()
+        }
+      },
       /** 編集モードがオフになったときに、詳細カードのターゲットをリセットする */
       editMode (newEditMode) {
         this.detailCardTarget = null
@@ -1363,6 +1625,15 @@ div(style="height: 100%; width: 100%")
           /** 線削除確認ダイアログは閉じない */
         } else if (this.deleteWaypointDialog) {
           /** 経由地点削除確認ダイアログは閉じない */
+        } else if (this.claimOwnershipDialog) {
+          /** 所有権移転確認ダイアログを閉じる */
+          this.claimOwnershipDialog = false
+        } else if (this.mapQrDialog) {
+          /** QRコードダイアログを閉じる */
+          this.mapQrDialog = false
+        } else if (this.commentDialog) {
+          /** コメントダイアログを閉じる */
+          this.commentDialog = false
         } else if (this.optionsDialog) {
           /** オプションダイアログを閉じる */
           this.optionsDialog = false
@@ -1415,15 +1686,36 @@ div(style="height: 100%; width: 100%")
       } else {
         // 既存の地図を読み込む
         const mapData = this.maps.maps.find(map => map.serverId === this.params)
+        const hasLocalData = !!mapData
         if (mapData) {
           this.mapData = mapData
           /** 後方互換: linesフィールドが存在しない場合は初期化 */
           if (!this.mapData.lines) {
             this.mapData.lines = []
           }
-        } else {
-          Toast.show({ text: '地図の読み込みに失敗しました。' })
         }
+        // サーバーから最新データを取得
+        if (this.mapData.ownerUserId === 'guest') {
+          if (this.myProfile.guest) {
+            Toast.show({
+              text: 'オンラインにデータを保存するには、ログインしてください。',
+            })
+          } else {
+            Toast.show({
+              text: 'オンラインにデータを保存するには、サーバー情報からアップロードを行ってください。',
+            })
+          }
+          // ローカルにもなければ不存在エラー
+          if (!hasLocalData) {
+            this.mapNotFound = true
+          }
+        } else {
+          this.fetchMapFromServer(hasLocalData)
+        }
+      }
+      // お気に入り状態を取得
+      if (!this.myProfile.guest && this.params && this.params !== 'create') {
+        this.fetchFavoriteStatus()
       }
     },
     unmounted () {
@@ -1504,6 +1796,7 @@ div(style="height: 100%; width: 100%")
         }
 
         this.mapData.points.push({
+          id: this.generateId(),
           latlng: [latlng.lat, latlng.lng],
           name: this.lastPointStyle?.iconName ?? `新しい地点${this.mapData.points.length + 1}`,
           description: this.lastPointStyle?.iconDescription,
@@ -1535,23 +1828,8 @@ div(style="height: 100%; width: 100%")
           this.drawingLine.waypoints[wpIdx].latlng = [latlng.lat, latlng.lng]
         }
       },
-      /** 編集内容を保存 */
-      save () {
-        if (!this.isEditorable) {
-          Toast.show({ text: '保存できませんでした。編集権限がありません。' })
-          return
-        } else if (!this.mapData.name) {
-          Toast.show({ text: '地図の名前を入力してください。' })
-          return
-        } else if (!this.mapData.serverId) {
-          Toast.show({ text: '地図のIDを入力してください。' })
-          return
-        }
-        // オフライン保存の場合はそのまま保存してよいが、オンライン保存の場合はサーバーに保存してから保存完了とする
-        // また、オンライン保存の場合はIDの重複を避けるため、IDが重複していないか確認する
-        // 一旦オフラインへ保存し、公開ボタンは別で用意する
-        // 一回でもサーバーにアップロードしたものは、保存時にサーバーにも保存するようにする
-
+      /** ローカルストアへの保存（共通処理） */
+      performLocalSave () {
         let cnt = 0
         let found = false
         for (const map of this.maps.maps) {
@@ -1569,6 +1847,38 @@ div(style="height: 100%; width: 100%")
         }
         Toast.show({ text: '保存しました！' })
         this.editMode = false
+      },
+      /** 編集内容を保存 */
+      save () {
+        if (!this.isEditorable) {
+          Toast.show({ text: '保存できませんでした。編集権限がありません。' })
+          return
+        } else if (!this.mapData.name) {
+          Toast.show({ text: '地図の名前を入力してください。' })
+          return
+        } else if (!this.mapData.serverId) {
+          Toast.show({ text: '地図のIDを入力してください。' })
+          return
+        }
+        // ログイン済みでオーナーがゲストの場合は所有権移転ダイアログを表示
+        if (!this.myProfile.guest && this.mapData.ownerUserId === 'guest') {
+          this.claimOwnershipDialog = true
+          return
+        }
+        this.performLocalSave()
+        // ログイン済みユーザーは自動的にサーバーにアップロード（ID競合がない場合）
+        // アップロードはバックグラウンドで実行し、成否はトーストで通知する
+        if (!this.myProfile.guest && !this.serverIdConflict) {
+          this.uploadMap()
+        }
+      },
+      /** 所有権を現在のユーザーに移転してローカル保存＋サーバーアップロード */
+      claimOwnershipAndSave () {
+        this.claimOwnershipDialog = false
+        this.mapData.ownerUserId = this.myProfile.userId
+        this.performLocalSave()
+
+        this.uploadMap()
       },
       /** 線描画を開始する */
       startDrawingLine (point: { latlng: [number, number] }) {
@@ -1591,6 +1901,7 @@ div(style="height: 100%; width: 100%")
           this.mapData.lines = []
         }
         this.mapData.lines.push({
+          id: this.generateId(),
           waypoints: this.drawingLine.waypoints,
           color: this.lastLineStyle?.color ?? '#3388ff',
           width: this.lastLineStyle?.width ?? 4,
@@ -1622,6 +1933,7 @@ div(style="height: 100%; width: 100%")
         const lng: number = target.latlng[1]
         const lngOffset = DUPLICATE_OFFSET_METERS / (METERS_PER_DEGREE_AT_EQUATOR * Math.cos(lat * Math.PI / 180))
         this.mapData.points.push({
+          id: this.generateId(),
           latlng: [lat, lng + lngOffset],
           name: target.name,
           description: target.description,
@@ -1758,7 +2070,7 @@ div(style="height: 100%; width: 100%")
       },
       /** 位置情報の許可を求める */
       async requestGeoPermission () {
-        await Geolocation.getCurrentPosition()
+        Geolocation.getCurrentPosition()
         this.requestGeoPermissionDialog = false
         return
       },
@@ -1840,8 +2152,168 @@ div(style="height: 100%; width: 100%")
           title: title,
         })
       },
+      /** 差分マージ用のランダムIDを生成（crypto.randomUUID優先） */
+      generateId (): string {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return crypto.randomUUID()
+        }
+        return Math.random().toString(36).slice(2, 10) + Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
+      },
+      /** IDを持っていないアイテムにIDを付与（後方互換・サーバーデータの読み込み時に使用） */
+      ensureItemIds (items: any[]): any[] {
+        return items.map((item: any) => item.id ? item : { ...item, id: this.generateId() })
+      },
+      /** 地図をサーバーにアップロードする */
+      async uploadMap () {
+        if (this.myProfile.guest) {
+          Toast.show({ text: 'ログインが必要です。' })
+          return
+        }
+        if (!this.mapData.serverId || !this.mapData.name) {
+          Toast.show({ text: '地図のIDと名前を入力してください。' })
+          return
+        }
+        this.uploadLoading = true
+        try {
+          const payload: any = { mapData: JSON.stringify(this.mapData) }
+          // ベースデータがある場合は差分マージ用に送信
+          if (this.serverBaseData) {
+            payload.baseData = JSON.stringify(this.serverBaseData)
+          }
+          const res = await this.sendAjaxWithAuth('/uploadMap.php', {
+            id: this.myProfile.userId,
+            token: this.myProfile.userToken,
+          }, payload, true) as any
+          if (res.body.status === 'ok') {
+            if (res.body.wasMerged) {
+              // サーバーのマージ結果でローカルを更新
+              this.mapData.points = this.ensureItemIds(res.body.points ?? [])
+              this.mapData.lines = this.ensureItemIds(res.body.lines ?? [])
+              Toast.show({ text: '他のユーザーの変更とマージしました！' })
+            } else {
+              Toast.show({ text: 'サーバーにアップロードしました！' })
+            }
+            // ベースデータを最新の状態に更新
+            this.serverBaseData = { ...this.mapData }
+          } else {
+            Toast.show({ text: res.body.reason ?? 'アップロードに失敗しました。' })
+          }
+        } catch (error: any) {
+          if (error?.ajaxInfo?.status === 403) {
+            Toast.show({ text: '権限がないためアップロードできません。' })
+          } else {
+            Toast.show({ text: 'アップロードに失敗しました。' })
+          }
+        } finally {
+          this.uploadLoading = false
+        }
+      },
+      /** サーバーから地図データを取得する */
+      async fetchMapFromServer (hasLocalData = true) {
+        if (!this.params || this.params === 'create') return
+        this.fetchMapLoading = true
+        this.serverIdConflict = false
+        try {
+          const headers = {
+            serverId: this.params,
+          } as any
+          if (!this.myProfile.guest) {
+            headers.id = this.myProfile.userId
+            headers.token = this.myProfile.userToken
+          }
+          const res = await this.sendAjaxWithAuth('/getMap.php', headers, null, false) as any
+          if (res.body.status === 'ok' && res.body.map) {
+            const serverMap = res.body.map
+            // IDを持っていないアイテムにIDを付与（後方互換）
+            serverMap.points = this.ensureItemIds(serverMap.points ?? [])
+            serverMap.lines = this.ensureItemIds(serverMap.lines ?? [])
+            this.mapData = {
+              ...serverMap,
+              lines: serverMap.lines,
+              points: serverMap.points,
+              sharedUserIds: serverMap.sharedUserIds ?? [],
+              editorUserIds: serverMap.editorUserIds ?? [],
+            }
+            // ローカルストアも更新
+            const idx = this.maps.maps.findIndex((m: any) => m.serverId === this.params)
+            if (idx === -1) {
+              this.maps.maps.push(this.mapData)
+            } else {
+              this.maps.maps[idx] = this.mapData
+            }
+            // 差分マージ用ベースデータを保存
+            this.serverBaseData = { ...this.mapData }
+          }
+        } catch (error: any) {
+          // サーバーにも地図がなく、ローカルにもない場合は「見つかりません」エラー
+          if (!hasLocalData) {
+            this.mapNotFound = true
+          }
+          if (error?.ajaxInfo?.status === 404) {
+            //
+          } else if (error?.ajaxInfo?.status === 403) {
+            // 他のユーザーがこのサーバーIDを保有しているため、アップロード不可を通知
+            this.serverIdConflict = true
+          }
+          // その他のエラー（ネットワーク等）はローカルデータをそのまま使用
+        } finally {
+          this.fetchMapLoading = false
+        }
+      },
+      /** お気に入り状態を取得する */
+      async fetchFavoriteStatus () {
+        const res = await this.sendAjaxWithAuth('/getFavorites.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, null, false) as any
+        if (res && res.body && res.body.status === 'ok') {
+          this.isFavorite = res.body.favorites.some((f: any) => f.serverId === this.params)
+        }
+      },
+      /** お気に入りをトグルする */
+      async toggleFavorite () {
+        if (this.myProfile.guest) return
+        const res = await this.sendAjaxWithAuth('/favoriteMap.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, { serverId: this.mapData.serverId }) as any
+        if (res && res.body && res.body.status === 'ok') {
+          this.isFavorite = res.body.action === 'added'
+        }
+      },
+      /** コメント一覧を取得する */
+      async fetchComments () {
+        if (!this.params || this.params === 'create') return
+        this.commentsLoading = true
+        const res = await this.sendAjaxWithAuth('/getComments.php', {
+          serverId: this.params,
+        }, null, false) as any
+        if (res && res.body && res.body.status === 'ok') {
+          this.comments = res.body.comments
+        }
+        this.commentsLoading = false
+      },
+      /** コメントを送信する */
+      async submitComment () {
+        const nospaceComment = this.newComment?.trim()
+        if (!nospaceComment) {
+          Toast.show({ text: 'コメントを入力してください。' })
+          return
+        }
+        if (!this.newComment || this.myProfile.guest) return
+        this.commentLoading = true
+        const res = await this.sendAjaxWithAuth('/addComment.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, { serverId: this.mapData.serverId, comment: this.newComment }) as any
+        if (res && res.body && res.body.status === 'ok') {
+          this.newComment = ''
+          await this.fetchComments()
+        }
+        this.commentLoading = false
+      },
     },
-  }
+  })
 </script>
 
 <style lang="scss" scoped>
