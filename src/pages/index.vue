@@ -17,7 +17,8 @@ v-card(
       v-model="activeTab"
       style="height: calc(100vh - 200px);"
       )
-      v-window-item(value="myMaps")
+      v-window-item(value="myMaps" style="height: 100%; overflow-y: auto;")
+        v-progress-linear(v-if="myMapsLoading" indeterminate)
         .content(v-if="maps.maps.length")
           p.mt-4 {{ maps.maps.length }}件の地図があります
           .map-card(
@@ -61,7 +62,7 @@ v-card(
           .mt-4
           p まだ地図がありません。右下のボタンから地図を作成してみましょう！
       //- お気に入りリストタブ
-      v-window-item(value="favorites")
+      v-window-item(value="favorites" style="height: 100%; overflow-y: auto;")
         .content
           p.mt-4 {{ favoritesList.length }}件のお気に入りがあります
           v-progress-linear(v-if="favoritesLoading" indeterminate)
@@ -97,7 +98,7 @@ v-card(
             style="opacity: 0.6;"
           ) お気に入りはまだありません
       //- 公開地図タブ
-      v-window-item(value="publicMaps")
+      v-window-item(value="publicMaps" style="height: 100%; overflow-y: auto;")
         .content
           v-text-field(
             v-model="publicMapSearch"
@@ -426,6 +427,8 @@ v-card(
         favoriteIds: [] as string[],
         /** お気に入り読み込み中フラグ */
         favoritesLoading: false,
+        /** 自分の地図リスト読み込み中フラグ */
+        myMapsLoading: false,
       }
     },
     computed: {},
@@ -498,6 +501,7 @@ v-card(
       // お気に入りリストを同期（ログイン済みの場合）
       if (!this.myProfile.guest) {
         await this.fetchFavorites()
+        await this.syncMyMaps()
       }
 
       // 承認していない友達リクエストがあったらポップアップを表示
@@ -614,6 +618,43 @@ v-card(
         if (res && res.body && res.body.status === 'ok') {
           await this.fetchFavorites()
         }
+      },
+      /** 自分の地図リストをサーバーと同期 */
+      async syncMyMaps () {
+        if (this.myProfile.guest) return
+        this.myMapsLoading = true
+        const res: any = await this.sendAjaxWithAuth('/getMyMaps.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, null, false)
+        if (res && res.body && res.body.status === 'ok') {
+          const serverMaps: any[] = res.body.maps
+          const localMaps = [...this.maps.maps]
+          for (const serverMap of serverMaps) {
+            const localIndex = localMaps.findIndex((m: any) => m.serverId === serverMap.serverId)
+            if (localIndex === -1) {
+              // サーバーにのみ存在する地図をローカルに追加
+              localMaps.push({
+                ...serverMap,
+                points: [],
+                lines: [],
+              })
+            } else {
+              // メタデータを更新し、ローカルの地点・線は保持する
+              const existing = localMaps[localIndex]!
+              existing.name = serverMap.name ?? existing.name
+              existing.description = serverMap.description
+              existing.icon = serverMap.icon
+              existing.isPublic = serverMap.isPublic
+              existing.ownerUserId = serverMap.ownerUserId ?? existing.ownerUserId
+              existing.createdAt = serverMap.createdAt
+              existing.sharedUserIds = serverMap.sharedUserIds
+              existing.editorUserIds = serverMap.editorUserIds
+            }
+          }
+          this.maps.maps = localMaps
+        }
+        this.myMapsLoading = false
       },
       /** 公開地図を取得 */
       async fetchPublicMaps (page: number) {
