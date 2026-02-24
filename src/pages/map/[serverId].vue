@@ -26,7 +26,7 @@ div(style="height: 100%; width: 100%")
       v-card-text
         v-icon(size="80" color="grey-lighten-1") mdi-map-search
         h2.mt-4(style="font-size: 1.4em; font-weight: 600;") 地図が見つかりません
-        p.mt-2(style="color: rgba(var(--v-theme-on-surface), 0.6);") この地図はローカルにもサーバーにも存在しません。
+        p.mt-2(style="color: rgba(var(--v-theme-on-surface), 0.6);") この地図は存在しないか、非公開に設定されている可能性があります。
         p(style="color: rgba(var(--v-theme-on-surface), 0.4); font-size: 0.85em;") ID: {{ $route.params.serverId }}
       v-card-actions(style="justify-content: center;")
         v-btn(
@@ -1522,7 +1522,6 @@ div(style="height: 100%; width: 100%")
             this.mapNotFound = true
           }
         } else {
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.fetchMapFromServer(hasLocalData)
         }
       }
@@ -2054,11 +2053,12 @@ div(style="height: 100%; width: 100%")
             this.serverBaseData = { ...this.mapData }
           }
         } catch (error: any) {
+          // サーバーにも地図がなく、ローカルにもない場合は「見つかりません」エラー
+          if (!hasLocalData) {
+            this.mapNotFound = true
+          }
           if (error?.ajaxInfo?.status === 404) {
-            // サーバーにも地図がなく、ローカルにもない場合は「見つかりません」エラー
-            if (!hasLocalData) {
-              this.mapNotFound = true
-            }
+            //
           } else if (error?.ajaxInfo?.status === 403) {
             // 他のユーザーがこのサーバーIDを保有しているため、アップロード不可を通知
             this.serverIdConflict = true
