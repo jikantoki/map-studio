@@ -71,7 +71,7 @@
     //-.createdat.mx-2(v-show="!loading")
       p(
         v-if="userData && userData.status != 'ng'"
-        ) {{ new Date(userData.createdAt * 1000) }}からMap studioを利用しています
+        ) {{ new Date(userData.createdAt * 1000) }}からMap Studioを利用しています
     //.share-and-sns-links.px-2(v-show="userData")
       .share-buttons
         v-btn.mx-2(
@@ -384,7 +384,7 @@ v-dialog(v-model="followDialogMessage")
         //   string: content,
         // })
         await Share.share({
-          title: 'Map studioで位置情報を共有しよう',
+          title: 'Map Studioで位置情報を共有しよう',
           url: content,
         })
       },

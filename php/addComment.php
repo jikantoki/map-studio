@@ -47,7 +47,7 @@ if ($mapRecord) {
         . "<p>地図を確認する: <a href=\"{$mapUrl}\">{$mapName}</a></p>"
         . "<p>コメントしたユーザーID: {$commenterName}</p>"
         . "<p>コメント内容:<br>{$commentText}</p>";
-      sendMail($ownerMail, "【Map studio】地図にコメントが追加されました", $message);
+      sendMail($ownerMail, "【Map Studio】地図にコメントが追加されました", $message);
     }
   }
 }

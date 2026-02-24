@@ -41,7 +41,7 @@ v-card(
         .icon
           v-icon mdi-application-outline
         .text
-          p.title Map studio
+          p.title Map Studio
           p.description &copy; 2025 エノキ電気
       .setting-item(
         v-ripple

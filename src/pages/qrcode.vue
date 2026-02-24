@@ -235,7 +235,7 @@ v-dialog(
       /** コンテンツの共有 */
       async copy (content: string) {
         await Share.share({
-          title: 'Map studioで位置情報を共有しよう',
+          title: 'Map Studioで位置情報を共有しよう',
           url: content,
         })
         this.searchResultDialog = false
