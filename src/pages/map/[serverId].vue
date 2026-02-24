@@ -665,10 +665,26 @@ div(style="height: 100%; width: 100%")
               v-list-item-title この地図を共有する
           v-list-item.item(
             @click="mapQrDialog = true; optionsDialog = false"
+            v-if="!myProfile.guest"
             )
             .icon-and-text
               v-icon mdi-qrcode
               v-list-item-title この地図のQRコードを表示
+          v-alert.mt-4(
+            v-if="!mapData.isPublic"
+            type="warning"
+            variant="outlined"
+          )
+            span この地図は非公開です。
+            br
+            span 閲覧・編集できるユーザーのみがアクセスできます。
+            br
+            span(
+              v-if="!myProfile.guest"
+            ) 公開設定を変更するには、上記の「公開設定」から「公開」を選択してください。
+            span(
+              v-else
+            ) 公開設定を変更するには、ログインしてから「公開」を選択してください。
   //- 編集モードを終了するか確認するダイアログ --
   v-dialog(
     v-model="editModeEndDialog"

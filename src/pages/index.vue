@@ -10,7 +10,10 @@ v-card(
   v-card-text(style="height: inherit; overflow-y: auto;")
     v-tabs(v-model="activeTab" grow)
       v-tab(value="myMaps") 自分の地図
-      v-tab(value="favorites") お気に入り
+      v-tab(
+        v-if="!myProfile.guest"
+        value="favorites"
+        ) お気に入り
       v-tab(value="publicMaps") みんなの地図
     //- 自分の地図タブ
     v-window(
@@ -52,7 +55,14 @@ v-card(
               v-icon mdi-dots-vertical
               v-menu(activator="parent")
                 v-list
-                  v-list-item(@click="toggleFavoriteFromList(map.serverId)")
+                  v-list-item(
+                    @click="$router.push(`/map/${map.serverId}`)"
+                    )
+                    v-list-item-title 開く
+                  v-list-item(
+                    v-if="!myProfile.guest"
+                    @click="toggleFavoriteFromList(map.serverId)"
+                    )
                     v-list-item-title {{ favoriteIds.includes(map.serverId) ? 'お気に入りから削除' : 'お気に入りに追加' }}
           .ma-16.pa-8
         .content(
