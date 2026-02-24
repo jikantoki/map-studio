@@ -670,6 +670,21 @@ div(style="height: 100%; width: 100%")
             .icon-and-text
               v-icon mdi-qrcode
               v-list-item-title この地図のQRコードを表示
+          v-list-item.item(
+            @click="openCopyMapDialog"
+            v-if="!myProfile.guest"
+            )
+            .icon-and-text
+              v-icon mdi-content-copy
+              v-list-item-title この地図をコピーして新規作成
+          v-list-item.item(
+            @click="deleteMapDialog = true; optionsDialog = false"
+            v-if="!myProfile.guest && mapData.ownerUserId === myProfile.userId"
+            style="color: rgb(var(--v-theme-error));"
+            )
+            .icon-and-text
+              v-icon(color="error") mdi-delete
+              v-list-item-title この地図を削除
           v-alert.mt-4(
             v-if="!mapData.isPublic"
             type="warning"
@@ -685,6 +700,107 @@ div(style="height: 100%; width: 100%")
             span(
               v-else
             ) 公開設定を変更するには、ログインしてから「公開」を選択してください。
+  //- 地図コピーダイアログ --
+  v-dialog(
+    v-model="copyMapDialog"
+    max-width="500"
+  )
+    v-card
+      v-card-actions
+        p.ml-2(class="headline" style="font-size: 1.3em") この地図をコピーして新規作成
+        v-spacer
+        v-btn(
+          text
+          @click="copyMapDialog = false"
+          icon="mdi-close"
+          )
+      v-card-text
+        p この地図のデータをコピーして新しい地図を作成します。
+        p.mt-2(style="font-size: 0.85em; opacity: 0.7;") ※所有者はあなたになり、閲覧・編集可能ユーザーはリセットされます。
+        v-text-field.mt-4(
+          v-model="copyMapForm.name"
+          label="新しい地図の名前"
+          placeholder="例: 東京観光地図のコピー"
+          variant="outlined"
+          clearable
+          @keydown="copyMapError = ''"
+        )
+        v-text-field(
+          v-model="copyMapForm.serverId"
+          label="新しい地図のID（URLに表示されます）"
+          placeholder="例: tokyo-tourist-map-copy"
+          variant="outlined"
+          clearable
+          @keydown="copyMapError = ''"
+        )
+        v-textarea(
+          v-model="copyMapForm.description"
+          label="新しい地図の説明"
+          placeholder="例: 東京の観光地をまとめた地図のコピーです。"
+          variant="outlined"
+          clearable
+          auto-grow
+          rows="1"
+          max-rows="5"
+        )
+        p.mt-2(
+          v-if="copyMapError"
+          style="color: rgb(var(--v-theme-error));"
+        ) {{ copyMapError }}
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="copyMapDialog = false"
+          prepend-icon="mdi-close"
+          ) キャンセル
+        v-btn(
+          style="background-color: rgb(var(--v-theme-primary)); color: white"
+          text
+          :loading="copyMapLoading"
+          :disabled="!copyMapForm.name || !copyMapForm.serverId"
+          @click="executeCopyMap"
+          prepend-icon="mdi-content-copy"
+          ) コピーして作成
+  //- 地図削除ダイアログ --
+  v-dialog(
+    v-model="deleteMapDialog"
+    persistent
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") この地図を削除しますか？
+      v-card-text
+        .text-content
+          p(style="color: rgb(var(--v-theme-error)); font-weight: bold;") この操作は取り消せません。地図のデータは完全に削除されます。
+          .my-2
+          p 削除するには、以下のテキストボックスに「delete my server」と入力してください。
+          v-text-field.mt-4(
+            v-model="deleteMapConfirmText"
+            label="確認テキスト"
+            placeholder="delete my server"
+            variant="outlined"
+            @keydown="deleteMapError = ''"
+          )
+          p(
+            v-if="deleteMapError"
+            style="color: rgb(var(--v-theme-error));"
+          ) {{ deleteMapError }}
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="deleteMapDialog = false; deleteMapConfirmText = ''"
+          prepend-icon="mdi-close"
+          ) キャンセル
+        v-btn(
+          style="background-color: rgb(var(--v-theme-error)); color: white"
+          text
+          :loading="deleteMapLoading"
+          :disabled="deleteMapConfirmText !== 'delete my server'"
+          @click="executeDeleteMap"
+          prepend-icon="mdi-delete"
+          ) 削除する
   //- 編集モードを終了するか確認するダイアログ --
   v-dialog(
     v-model="editModeEndDialog"
@@ -1401,6 +1517,26 @@ div(style="height: 100%; width: 100%")
         commentLoading: false,
         /** QRコード読み込み中フラグ */
         qrLoading: false,
+        /** 地図コピーダイアログ表示フラグ */
+        copyMapDialog: false,
+        /** 地図コピーフォームデータ */
+        copyMapForm: {
+          name: '',
+          serverId: '',
+          description: '',
+        },
+        /** 地図コピー処理中フラグ */
+        copyMapLoading: false,
+        /** 地図コピーエラーメッセージ */
+        copyMapError: '',
+        /** 地図削除ダイアログ表示フラグ */
+        deleteMapDialog: false,
+        /** 地図削除確認テキスト */
+        deleteMapConfirmText: '',
+        /** 地図削除処理中フラグ */
+        deleteMapLoading: false,
+        /** 地図削除エラーメッセージ */
+        deleteMapError: '',
       }
     },
     computed: {
@@ -1649,6 +1785,13 @@ div(style="height: 100%; width: 100%")
         } else if (this.claimOwnershipDialog) {
           /** 所有権移転確認ダイアログを閉じる */
           this.claimOwnershipDialog = false
+        } else if (this.copyMapDialog) {
+          /** 地図コピーダイアログを閉じる */
+          this.copyMapDialog = false
+        } else if (this.deleteMapDialog) {
+          /** 地図削除ダイアログを閉じる */
+          this.deleteMapDialog = false
+          this.deleteMapConfirmText = ''
         } else if (this.mapQrDialog) {
           /** QRコードダイアログを閉じる */
           this.mapQrDialog = false
@@ -2332,6 +2475,80 @@ div(style="height: 100%; width: 100%")
           await this.fetchComments()
         }
         this.commentLoading = false
+      },
+      /** 地図コピーダイアログを開く */
+      openCopyMapDialog () {
+        this.copyMapForm = {
+          name: `${this.mapData.name}のコピー`,
+          serverId: '',
+          description: this.mapData.description ?? '',
+        }
+        this.copyMapError = ''
+        this.copyMapDialog = true
+        this.optionsDialog = false
+      },
+      /** 地図をコピーして新規作成する */
+      async executeCopyMap () {
+        if (!this.copyMapForm.name || !this.copyMapForm.serverId) {
+          this.copyMapError = '地図の名前とIDを入力してください。'
+          return
+        }
+        this.copyMapLoading = true
+        this.copyMapError = ''
+        try {
+          const res = await this.sendAjaxWithAuth('/copyMap.php', {
+            id: this.myProfile.userId,
+            token: this.myProfile.userToken,
+          }, {
+            sourceServerId: this.mapData.serverId,
+            newServerId: this.copyMapForm.serverId,
+            newName: this.copyMapForm.name,
+            newDescription: this.copyMapForm.description ?? '',
+          }) as any
+          if (res.body.status === 'ok') {
+            this.copyMapDialog = false
+            Toast.show({ text: '地図をコピーしました！' })
+            this.$router.push(`/map/${res.body.newServerId}`)
+          } else if (res.body.errCode === 409) {
+            this.copyMapError = 'このIDは既に使用されています。別のIDを入力してください。'
+          } else {
+            this.copyMapError = res.body.reason ?? 'コピーに失敗しました。'
+          }
+        } catch {
+          this.copyMapError = 'コピーに失敗しました。'
+        } finally {
+          this.copyMapLoading = false
+        }
+      },
+      /** 地図を削除する */
+      async executeDeleteMap () {
+        if (this.deleteMapConfirmText !== 'delete my server') {
+          this.deleteMapError = '「delete my server」と入力してください。'
+          return
+        }
+        this.deleteMapLoading = true
+        this.deleteMapError = ''
+        try {
+          const res = await this.sendAjaxWithAuth('/deleteMap.php', {
+            id: this.myProfile.userId,
+            token: this.myProfile.userToken,
+          }, { serverId: this.mapData.serverId }) as any
+          if (res.body.status === 'ok') {
+            // Piniaストア（永続化）からも削除
+            this.maps.maps = this.maps.maps.filter((m: any) => m.serverId !== this.mapData.serverId)
+            this.deleteMapDialog = false
+            Toast.show({ text: '地図を削除しました。' })
+            this.$router.back()
+          } else if (res.body.errCode === 403) {
+            this.deleteMapError = '所有者のみ削除できます。'
+          } else {
+            this.deleteMapError = res.body.reason ?? '削除に失敗しました。'
+          }
+        } catch {
+          this.deleteMapError = '削除に失敗しました。'
+        } finally {
+          this.deleteMapLoading = false
+        }
       },
     },
   })
