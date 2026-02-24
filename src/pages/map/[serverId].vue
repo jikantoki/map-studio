@@ -678,6 +678,15 @@ div(style="height: 100%; width: 100%")
               v-icon mdi-content-copy
               v-list-item-title この地図をコピーして新規作成
           v-list-item.item(
+            v-if="myProfile.guest"
+            @click="$router.push('/login')"
+            )
+            .icon-and-text
+              v-icon mdi-content-copy
+              .copy-login-hint
+                v-list-item-title この地図をコピーして使う
+                v-list-item-subtitle ログインするとこの地図をコピーして利用できます
+          v-list-item.item(
             @click="deleteMapDialog = true; optionsDialog = false"
             v-if="!myProfile.guest && mapData.ownerUserId === myProfile.userId"
             style="color: rgb(var(--v-theme-error));"
