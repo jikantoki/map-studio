@@ -1851,7 +1851,7 @@ div(style="height: 100%; width: 100%")
       },
       /** 位置情報の許可を求める */
       async requestGeoPermission () {
-        await Geolocation.getCurrentPosition()
+        Geolocation.getCurrentPosition()
         this.requestGeoPermissionDialog = false
         return
       },
@@ -1975,7 +1975,7 @@ div(style="height: 100%; width: 100%")
               Toast.show({ text: 'サーバーにアップロードしました！' })
             }
             // ベースデータを最新の状態に更新
-            this.serverBaseData = JSON.parse(JSON.stringify(this.mapData))
+            this.serverBaseData = { ...this.mapData }
           } else {
             Toast.show({ text: res.body.reason ?? 'アップロードに失敗しました。' })
           }
@@ -2023,7 +2023,7 @@ div(style="height: 100%; width: 100%")
               this.maps.maps[idx] = this.mapData
             }
             // 差分マージ用ベースデータを保存
-            this.serverBaseData = JSON.parse(JSON.stringify(this.mapData))
+            this.serverBaseData = { ...this.mapData }
           }
         } catch (error: any) {
           if (error?.ajaxInfo?.status === 404) {
