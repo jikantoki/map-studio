@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "xyz.enoki.mapstudio",
+      "sha256_cert_fingerprints": [
+        "E1:36:C3:0A:F6:DD:BD:2A:2B:3A:5B:DB:11:35:C4:52:7D:61:8A:5F:01:05:44:E8:16:57:C5:3B:67:71:42:5F"
+      ]
+    }
+  }
+]
