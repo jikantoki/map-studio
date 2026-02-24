@@ -1121,8 +1121,23 @@ div(style="height: 100%; width: 100%")
       v-card-text
         p.mb-4 以下のURLを共有してください
         pre.pa-4(style="border-radius: 8px; word-break: break-all;") {{ mapQrUrl }}
-        .canvas-area.my-4(style="display: flex; justify-content: center;")
+        .canvas-area.my-4(
+          style="display: flex; justify-content: center;"
+          v-show="!qrLoading"
+          )
           canvas#map-qr-canvas(style="border-radius: 10%; max-width: 20em; max-height: 20em;")
+        .qr-loading.my-4(
+          v-show="qrLoading"
+          style="display: flex; justify-content: center; width: 70vw; height: 70vw; max-width: 20em; max-height: 20em; background-color: white; border-radius: 10%; display: flex; flex-direction: column; align-items: center; justify-content: center; justify-self: center;"
+        )
+          v-progress-circular.my-4(
+            indeterminate
+            :size="64"
+            color="black"
+            )
+          p.my-4(
+            style="color: black;"
+          ) QRコード読み込み中…
       v-card-actions
         v-btn(
           @click="share(mapQrUrl, mapData.name)"
@@ -1363,6 +1378,8 @@ div(style="height: 100%; width: 100%")
         newComment: '',
         /** コメント送信中フラグ */
         commentLoading: false,
+        /** QRコード読み込み中フラグ */
+        qrLoading: false,
       }
     },
     computed: {
@@ -1482,18 +1499,43 @@ div(style="height: 100%; width: 100%")
       /** QRコードダイアログが開いたらQRコードを生成 */
       mapQrDialog: {
         handler: async function (val: boolean) {
+          this.qrLoading = true
           if (!val) return
           const host = window.location.host
           this.mapQrUrl = `https://${host}/map/${this.mapData.serverId}`
           await this.$nextTick()
           const canvas = document.querySelector('#map-qr-canvas') as HTMLCanvasElement | null
           if (!canvas) return
+          const ctx = canvas.getContext('2d')
+          if (!ctx) return false
           const QRCode = (await import('qrcode')).default
-          QRCode.toCanvas(canvas, this.mapQrUrl, { scale: 8 })
+          QRCode.toCanvas(canvas, this.mapQrUrl, { scale: 10 })
           canvas.style.height = '70vw'
           canvas.style.width = '70vw'
           canvas.style.maxWidth = '20em'
           canvas.style.maxHeight = '20em'
+          const logo = new Image()
+          logo.src = '/icon.png'
+          logo.addEventListener('load', () => {
+            const actualCanvasWidth = canvas.width
+            const actualCanvasHeight = canvas.height
+            const logoDiameter = actualCanvasWidth * (15 / 70)
+
+            const logoWidth = logoDiameter
+            const logoHeight = logoDiameter
+
+            const startX = (actualCanvasWidth / 2) - (logoWidth / 2)
+            const startY = (actualCanvasHeight / 2) - (logoHeight / 2)
+
+            ctx.beginPath()
+            const rad = logoDiameter / 2
+            ctx.arc(actualCanvasWidth / 2, actualCanvasHeight / 2, rad, 0, Math.PI * 2, false)
+            ctx.fillStyle = '#FFFFFF'
+            ctx.fill()
+
+            ctx.drawImage(logo, startX, startY, logoWidth, logoHeight)
+            this.qrLoading = false
+          })
         },
       },
       /** コメントダイアログが開いたらコメントを取得 */
