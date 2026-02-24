@@ -1143,32 +1143,18 @@ div(style="height: 100%; width: 100%")
         p.ml-2(style="font-size: 1.3em") コメント
         v-spacer
         v-btn(text @click="commentDialog = false" icon="mdi-close")
-      v-card-text(style="height: calc(100% - 8em); overflow-y: auto;")
-        .comment-form.mb-4(v-if="!myProfile.guest")
-          v-textarea(
-            v-model="newComment"
-            label="コメントを入力"
-            variant="outlined"
-            auto-grow
-            rows="2"
-            max-rows="5"
-            :counter="1000"
-            clearable
-          )
-          v-btn(
-            :disabled="!newComment || newComment.length === 0 || newComment.length > 1000 || commentLoading"
-            :loading="commentLoading"
-            @click="submitComment"
-            style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
-            prepend-icon="mdi-send"
-          ) 送信
+      v-card-text(
+        style="height: calc(100% - 8em); overflow: hidden; position: relative;"
+        )
         v-alert.mb-4(
           v-if="myProfile.guest"
           type="info"
           variant="outlined"
         ) コメントするにはログインが必要です。
         v-progress-linear(v-if="commentsLoading" indeterminate)
-        .comments-list
+        .comments-list(
+          style="height: calc(100% - 200px); overflow-y: auto;"
+        )
           .comment-item.mb-3(
             v-for="comment in comments"
             :key="comment.id"
@@ -1179,7 +1165,31 @@ div(style="height: 100%; width: 100%")
               span(style="font-weight: 500;") {{ comment.userId }}
               v-spacer
               span(style="font-size: 0.85em; opacity: 0.7;") {{ new Date(comment.createdAt * 1000).toLocaleString() }}
-            p(style="white-space: pre-wrap; word-break: break-word;") {{ comment.comment }}
+            p(style="white-space: pre-wrap; word-break: break-word; max-height: 7em; overflow: auto;") {{ comment.comment }}
+        .comment-form.mb-4.mx-2(
+          v-if="!myProfile.guest"
+          style="position: absolute; bottom: 1em; left: 1em; right: 1em; background-color: rgba(var(--v-theme-surface), 1);"
+          )
+          v-textarea.mb-2(
+            v-model="newComment"
+            label="コメントを入力"
+            placeholder="例: この場所はとても良かったです！"
+            variant="outlined"
+            auto-grow
+            rows="2"
+            max-rows="5"
+            :counter="1000"
+            clearable
+            @keydown.ctrl.enter="submitComment"
+          )
+          v-btn(
+            :disabled="!newComment || newComment.length === 0 || newComment.length > 1000 || commentLoading"
+            :loading="commentLoading"
+            @click="submitComment"
+            style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
+            prepend-icon="mdi-send"
+          ) 送信
+          .bottom-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
         p.text-center.mt-4(v-if="!commentsLoading && comments.length === 0" style="opacity: 0.6;") コメントはまだありません
 </template>
 
@@ -2243,6 +2253,11 @@ div(style="height: 100%; width: 100%")
       },
       /** コメントを送信する */
       async submitComment () {
+        const nospaceComment = this.newComment?.trim()
+        if (!nospaceComment) {
+          Toast.show({ text: 'コメントを入力してください。' })
+          return
+        }
         if (!this.newComment || this.myProfile.guest) return
         this.commentLoading = true
         const res = await this.sendAjaxWithAuth('/addComment.php', {
