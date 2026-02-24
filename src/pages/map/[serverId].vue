@@ -614,7 +614,7 @@ div(style="height: 100%; width: 100%")
           :disabled="mapData.serverId === '' || mapData.name === '' || myProfile.guest || serverIdConflict"
           :loading="uploadLoading"
           text
-          @click="uploadMap"
+          @click="save"
           append-icon="mdi-upload"
           style="background-color: rgb(var(--v-theme-primary)); color: white; width: 100%;"
         ) サーバーにアップロード
@@ -1045,7 +1045,6 @@ div(style="height: 100%; width: 100%")
   //- 所有権移転確認ダイアログ
   v-dialog(
     v-model="claimOwnershipDialog"
-    persistent
     max-width="400"
   )
     v-card
@@ -1057,17 +1056,18 @@ div(style="height: 100%; width: 100%")
           p 現在のアカウント（{{ myProfile.userId }}）に所有権を移してサーバーにアップロードするか、ゲストのままローカルにのみ保存するか選択してください。
       v-card-actions
         v-spacer
-        v-btn(
-          text
-          @click="claimOwnershipDialog = false; performLocalSave()"
-          prepend-icon="mdi-content-save"
-        ) ローカルのみ保存
-        v-btn(
-          style="background-color: rgb(var(--v-theme-primary)); color: white"
-          text
-          @click="claimOwnershipAndSave"
-          prepend-icon="mdi-account-check"
-        ) 所有権を取得してアップロード
+        .btns(style="display: grid; gap: 8px;")
+          v-btn(
+            text
+            @click="claimOwnershipDialog = false; performLocalSave()"
+            prepend-icon="mdi-content-save"
+          ) ローカルのみ保存
+          v-btn(
+            style="background-color: rgb(var(--v-theme-primary)); color: white"
+            text
+            @click="claimOwnershipAndSave"
+            prepend-icon="mdi-account-check"
+          ) 所有権を取得してアップロード
 </template>
 
 <script lang="ts">
@@ -1416,6 +1416,9 @@ div(style="height: 100%; width: 100%")
           /** 線削除確認ダイアログは閉じない */
         } else if (this.deleteWaypointDialog) {
           /** 経由地点削除確認ダイアログは閉じない */
+        } else if (this.claimOwnershipDialog) {
+          /** 所有権移転確認ダイアログを閉じる */
+          this.claimOwnershipDialog = false
         } else if (this.optionsDialog) {
           /** オプションダイアログを閉じる */
           this.optionsDialog = false
@@ -1478,8 +1481,19 @@ div(style="height: 100%; width: 100%")
           Toast.show({ text: '地図の読み込みに失敗しました。' })
         }
         // サーバーから最新データを取得
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.fetchMapFromServer()
+        if (this.mapData.ownerUserId === 'guest') {
+          if (this.myProfile.guest) {
+            Toast.show({
+              text: 'オンラインにデータを保存するには、ログインしてください。',
+            })
+          } else {
+            Toast.show({
+              text: 'オンラインにデータを保存するには、サーバー情報からアップロードを行ってください。',
+            })
+          }
+        } else {
+          this.fetchMapFromServer()
+        }
       }
     },
     unmounted () {
@@ -1632,7 +1646,6 @@ div(style="height: 100%; width: 100%")
         // ログイン済みユーザーは自動的にサーバーにアップロード（ID競合がない場合）
         // アップロードはバックグラウンドで実行し、成否はトーストで通知する
         if (!this.myProfile.guest && !this.serverIdConflict) {
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.uploadMap()
         }
       },
@@ -1641,7 +1654,7 @@ div(style="height: 100%; width: 100%")
         this.claimOwnershipDialog = false
         this.mapData.ownerUserId = this.myProfile.userId
         this.performLocalSave()
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+
         this.uploadMap()
       },
       /** 線描画を開始する */
@@ -1937,8 +1950,8 @@ div(style="height: 100%; width: 100%")
           } else {
             Toast.show({ text: res.body.reason ?? 'アップロードに失敗しました。' })
           }
-        } catch (e: any) {
-          if (e?.ajaxInfo?.status === 403) {
+        } catch (error: any) {
+          if (error?.ajaxInfo?.status === 403) {
             Toast.show({ text: '権限がないためアップロードできません。' })
           } else {
             Toast.show({ text: 'アップロードに失敗しました。' })
@@ -1972,16 +1985,16 @@ div(style="height: 100%; width: 100%")
             }
             // ローカルストアも更新
             const idx = this.maps.maps.findIndex((m: any) => m.serverId === this.params)
-            if (idx >= 0) {
-              this.maps.maps[idx] = this.mapData
-            } else {
+            if (idx === -1) {
               this.maps.maps.push(this.mapData)
+            } else {
+              this.maps.maps[idx] = this.mapData
             }
           }
-        } catch (e: any) {
-          if (e?.ajaxInfo?.status === 404) {
+        } catch (error: any) {
+          if (error?.ajaxInfo?.status === 404) {
             // サーバーに地図がない場合はローカルデータをそのまま使用（通知不要）
-          } else if (e?.ajaxInfo?.status === 403) {
+          } else if (error?.ajaxInfo?.status === 403) {
             // 他のユーザーがこのサーバーIDを保有しているため、アップロード不可を通知
             this.serverIdConflict = true
           }
