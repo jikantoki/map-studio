@@ -54,7 +54,7 @@ v-card(
       v-btn(
         size="x-large"
         icon
-        @click="$router.push('/map/create')"
+        @click="myProfile.guest ? mapCreateDialog = true : $router.push('/map/create')"
         style="background-color: rgb(var(--v-theme-primary)); color: white"
         )
         v-icon mdi-plus
@@ -212,6 +212,33 @@ v-card(
           @click="$router.push('/friendlist')"
           style="background-color: rgb(var(--v-theme-primary)); color: white"
         ) リクエストを見る
+  v-dialog(
+    v-model="mapCreateDialog"
+  )
+    v-card
+      .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+      v-card-actions
+        p.ml-2(class="headline" style="font-size: 1.3em") 地図を作成
+        v-spacer
+        v-btn(
+          text
+          @click="mapCreateDialog = false"
+          icon="mdi-close"
+          )
+      v-card-text
+        p ログインしてから地図を作成することで、地図の管理や友達との共有ができるようになります。
+      v-card-actions
+        v-btn(
+          text
+          prepend-icon="mdi-account-off"
+          @click="mapCreateDialog = false; $router.push('/map/create')"
+        ) ログインせずに作成
+        v-btn(
+          text
+          @click="$router.push('/login')"
+          prepend-icon="mdi-login"
+          style="background-color: rgb(var(--v-theme-primary)); color: white;"
+        ) ログインして作成
 </template>
 
 <script lang="ts">
@@ -254,6 +281,8 @@ v-card(
         settings: useSettingsStore(),
         /** 地図ストア */
         maps: useMapsStore(),
+        /** 地図作成ダイアログ */
+        mapCreateDialog: false,
       }
     },
     computed: {},
@@ -545,5 +574,12 @@ v-card(
 
 .opacity05 {
   opacity: 0.7;
+}
+
+.map-card {
+  transition: all 0.3s;
+  &:hover {
+    background-color: rgba(var(--v-theme-primary), 0.1);
+  }
 }
 </style>
