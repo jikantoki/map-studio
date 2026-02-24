@@ -47,22 +47,6 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
-        <!-- Location Foreground Service -->
-        <service
-            android:name=".LocationForegroundService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="location"
-            android:stopWithTask="false"
-        />
-
-        <!-- Service Restart Receiver -->
-        <receiver android:name=".ServiceRestartReceiver" android:enabled="true" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="xyz.enoki.mapstudio.ACTION_RESTART_SERVICE" />
-            </intent-filter>
-        </receiver>
 
         <!-- Trigger Google Play services to install the backported photo picker module. -->
         <!--suppress AndroidDomInspection -->

@@ -17,7 +17,8 @@ v-card(
       v-model="activeTab"
       style="height: calc(100vh - 200px);"
       )
-      v-window-item(value="myMaps")
+      v-window-item(value="myMaps" style="height: 100%; overflow-y: auto;")
+        v-progress-linear(v-if="myMapsLoading" indeterminate)
         .content(v-if="maps.maps.length")
           p.mt-4 {{ maps.maps.length }}件の地図があります
           .map-card(
@@ -38,6 +39,11 @@ v-card(
               p 作成日時: {{ map.createdAt ? new Date(map.createdAt).toLocaleString() : '不明' }}
               p {{ map.isPublic ? '公開' : '非公開' }} {{ map.ownerUserId === myProfile.userId ? '（あなたの地図）' : `@${map.ownerUserId}が作成` }}
               p {{ map.description && map.description.length ? map.description : '説明はありません' }}
+              //- 所有者がguestの場合、データが同期されていないエラーを表示
+              p(
+                v-if="map.ownerUserId === 'guest'"
+                style="color: red; font-weight: bold; background-color: rgba(255, 0, 0, 0.1); padding: 0.5em; border-radius: 8px; margin-top: 0.5em;"
+                ) データが同期されていません
             v-btn(
               icon
               variant="text"
@@ -48,6 +54,7 @@ v-card(
                 v-list
                   v-list-item(@click="toggleFavoriteFromList(map.serverId)")
                     v-list-item-title {{ favoriteIds.includes(map.serverId) ? 'お気に入りから削除' : 'お気に入りに追加' }}
+          .ma-16.pa-8
         .content(
           v-else
           style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh;"
@@ -61,7 +68,7 @@ v-card(
           .mt-4
           p まだ地図がありません。右下のボタンから地図を作成してみましょう！
       //- お気に入りリストタブ
-      v-window-item(value="favorites")
+      v-window-item(value="favorites" style="height: 100%; overflow-y: auto;")
         .content
           p.mt-4 {{ favoritesList.length }}件のお気に入りがあります
           v-progress-linear(v-if="favoritesLoading" indeterminate)
@@ -97,7 +104,7 @@ v-card(
             style="opacity: 0.6;"
           ) お気に入りはまだありません
       //- 公開地図タブ
-      v-window-item(value="publicMaps")
+      v-window-item(value="publicMaps" style="height: 100%; overflow-y: auto;")
         .content
           v-text-field(
             v-model="publicMapSearch"
@@ -426,6 +433,8 @@ v-card(
         favoriteIds: [] as string[],
         /** お気に入り読み込み中フラグ */
         favoritesLoading: false,
+        /** 自分の地図リスト読み込み中フラグ */
+        myMapsLoading: false,
       }
     },
     computed: {},
@@ -498,6 +507,7 @@ v-card(
       // お気に入りリストを同期（ログイン済みの場合）
       if (!this.myProfile.guest) {
         await this.fetchFavorites()
+        await this.syncMyMaps()
       }
 
       // 承認していない友達リクエストがあったらポップアップを表示
@@ -614,6 +624,43 @@ v-card(
         if (res && res.body && res.body.status === 'ok') {
           await this.fetchFavorites()
         }
+      },
+      /** 自分の地図リストをサーバーと同期 */
+      async syncMyMaps () {
+        if (this.myProfile.guest) return
+        this.myMapsLoading = true
+        const res: any = await this.sendAjaxWithAuth('/getMyMaps.php', {
+          id: this.myProfile.userId,
+          token: this.myProfile.userToken,
+        }, null, false)
+        if (res && res.body && res.body.status === 'ok') {
+          const serverMaps: any[] = res.body.maps
+          const localMaps = [...this.maps.maps]
+          for (const serverMap of serverMaps) {
+            const localIndex = localMaps.findIndex((m: any) => m.serverId === serverMap.serverId)
+            if (localIndex === -1) {
+              // サーバーにのみ存在する地図をローカルに追加
+              localMaps.push({
+                ...serverMap,
+                points: [],
+                lines: [],
+              })
+            } else {
+              // メタデータを更新し、ローカルの地点・線は保持する
+              const existing = localMaps[localIndex]!
+              existing.name = serverMap.name ?? existing.name
+              existing.description = serverMap.description
+              existing.icon = serverMap.icon
+              existing.isPublic = serverMap.isPublic
+              existing.ownerUserId = serverMap.ownerUserId ?? existing.ownerUserId
+              existing.createdAt = serverMap.createdAt
+              existing.sharedUserIds = serverMap.sharedUserIds
+              existing.editorUserIds = serverMap.editorUserIds
+            }
+          }
+          this.maps.maps = localMaps
+        }
+        this.myMapsLoading = false
       },
       /** 公開地図を取得 */
       async fetchPublicMaps (page: number) {
