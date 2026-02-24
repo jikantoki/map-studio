@@ -12,6 +12,28 @@ div(style="height: 100%; width: 100%")
       color="primary"
       size="64"
     )
+  //- 地図データが見つからない場合のエラー画面
+  .map-not-found(
+    v-if="mapNotFound"
+    style="position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; background-color: rgb(var(--v-theme-background));"
+  )
+    .top-android-15-or-higher(v-if="settings.hidden.isAndroid15OrHigher")
+    v-card(
+      max-width="400"
+      style="width: 90%; text-align: center;"
+      elevation="0"
+    )
+      v-card-text
+        v-icon(size="80" color="grey-lighten-1") mdi-map-search
+        h2.mt-4(style="font-size: 1.4em; font-weight: 600;") 地図が見つかりません
+        p.mt-2(style="color: rgba(var(--v-theme-on-surface), 0.6);") この地図はローカルにもサーバーにも存在しません。
+        p(style="color: rgba(var(--v-theme-on-surface), 0.4); font-size: 0.85em;") ID: {{ $route.params.serverId }}
+      v-card-actions(style="justify-content: center;")
+        v-btn(
+          @click="$router.back()"
+          prepend-icon="mdi-arrow-left"
+          style="background-color: rgb(var(--v-theme-primary)); color: white;"
+        ) 前のページに戻る
   LMap(
     :zoom="leaflet.zoom"
     :center="leaflet.center"
@@ -1222,6 +1244,8 @@ div(style="height: 100%; width: 100%")
         claimOwnershipDialog: false,
         /** 差分マージ用ベースデータ（最後にサーバーと同期した状態） */
         serverBaseData: null as Map | null,
+        /** 地図データがローカルにもサーバーにも存在しない */
+        mapNotFound: false,
       }
     },
     computed: {
@@ -1474,14 +1498,13 @@ div(style="height: 100%; width: 100%")
       } else {
         // 既存の地図を読み込む
         const mapData = this.maps.maps.find(map => map.serverId === this.params)
+        const hasLocalData = !!mapData
         if (mapData) {
           this.mapData = mapData
           /** 後方互換: linesフィールドが存在しない場合は初期化 */
           if (!this.mapData.lines) {
             this.mapData.lines = []
           }
-        } else {
-          Toast.show({ text: '地図の読み込みに失敗しました。' })
         }
         // サーバーから最新データを取得
         if (this.mapData.ownerUserId === 'guest') {
@@ -1494,8 +1517,13 @@ div(style="height: 100%; width: 100%")
               text: 'オンラインにデータを保存するには、サーバー情報からアップロードを行ってください。',
             })
           }
+          // ローカルにもなければ不存在エラー
+          if (!hasLocalData) {
+            this.mapNotFound = true
+          }
         } else {
-          this.fetchMapFromServer()
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          this.fetchMapFromServer(hasLocalData)
         }
       }
     },
@@ -1990,7 +2018,7 @@ div(style="height: 100%; width: 100%")
         }
       },
       /** サーバーから地図データを取得する */
-      async fetchMapFromServer () {
+      async fetchMapFromServer (hasLocalData = true) {
         if (!this.params || this.params === 'create') return
         this.fetchMapLoading = true
         this.serverIdConflict = false
@@ -2027,7 +2055,10 @@ div(style="height: 100%; width: 100%")
           }
         } catch (error: any) {
           if (error?.ajaxInfo?.status === 404) {
-            // サーバーに地図がない場合はローカルデータをそのまま使用（通知不要）
+            // サーバーにも地図がなく、ローカルにもない場合は「見つかりません」エラー
+            if (!hasLocalData) {
+              this.mapNotFound = true
+            }
           } else if (error?.ajaxInfo?.status === 403) {
             // 他のユーザーがこのサーバーIDを保有しているため、アップロード不可を通知
             this.serverIdConflict = true
