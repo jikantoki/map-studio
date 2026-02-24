@@ -262,6 +262,15 @@ div(style="height: 100%; width: 100%")
         style="background-color: rgba(var(--v-theme-surface), 0.9);"
         )
         v-icon mdi-content-save
+    //-- 地図の中心地に移動ボタン --
+    .current-button
+      v-btn(
+        size="x-large"
+        icon
+        @click="jumpToDefaultCenter"
+        style="background-color: rgba(var(--v-theme-surface), 0.9);"
+        )
+        v-icon mdi-home-map-marker
     //-- 右下の現在地ボタン --
     .current-button
       v-btn(
@@ -632,6 +641,13 @@ div(style="height: 100%; width: 100%")
             append-icon="mdi-content-save"
             style="background-color: rgb(var(--v-theme-primary)); color: white;"
           ) 保存
+          v-btn.my-2(
+            v-if="isEditorable"
+            text
+            @click="registerDefaultCenter"
+            prepend-icon="mdi-home-map-marker"
+            style="background-color: rgba(var(--v-theme-secondary), 1); color: white;"
+          ) 現在開いている地点を地図の中心として登録
           hr.my-4
         v-alert.mb-2(
           v-if="serverIdConflict"
@@ -711,6 +727,23 @@ div(style="height: 100%; width: 100%")
           @click="editMode = false; editModeEndDialog = false"
           prepend-icon="mdi-check"
           ) ええで！
+  //- 地図の中心地が未設定の場合のダイアログ --
+  v-dialog(
+    v-model="defaultCenterDialog"
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") 中心地が未設定です
+      v-card-text
+        p 地図の中心地を設定することでワンクリックで中心地に戻れます。
+        p.mt-2 設定するには、編集モードのサーバー情報から「現在開いている地点を地図の中心として登録」を押してください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="defaultCenterDialog = false"
+          prepend-icon="mdi-close"
+          ) 閉じる
   //- 点を削除するか確認するダイアログ --
   v-dialog(
     v-model="deletePointDialog"
@@ -1401,6 +1434,8 @@ div(style="height: 100%; width: 100%")
         commentLoading: false,
         /** QRコード読み込み中フラグ */
         qrLoading: false,
+        /** 地図の中心地が未設定のときに表示するダイアログフラグ */
+        defaultCenterDialog: false,
       }
     },
     computed: {
@@ -1694,7 +1729,10 @@ div(style="height: 100%; width: 100%")
 
       /** 現在地を取得し、地図の中心も移動 */
       setTimeout(async () => {
-        await this.setCurrentPosition()
+        // defaultCenterLatLngが設定されている場合は現在地への移動をスキップ
+        if (!this.mapData.defaultCenterLatLng) {
+          await this.setCurrentPosition()
+        }
       }, 1000)
 
       // 新規作成の場合は、地図データの初期値を設定
@@ -1713,6 +1751,13 @@ div(style="height: 100%; width: 100%")
           /** 後方互換: linesフィールドが存在しない場合は初期化 */
           if (!this.mapData.lines) {
             this.mapData.lines = []
+          }
+          /** ローカルにdefaultCenterLatLngが設定されている場合はそこにジャンプ */
+          if (this.mapData.defaultCenterLatLng) {
+            setTimeout(() => {
+              this.leaflet.center = [...this.mapData.defaultCenterLatLng!]
+              this.leaflet.zoom = 15
+            }, 100)
           }
         }
         // サーバーから最新データを取得
@@ -2089,6 +2134,20 @@ div(style="height: 100%; width: 100%")
         await new Promise(resolve => setTimeout(resolve, 500))
         this.leaflet.zoom = 15
       },
+      /** 地図の中心地ボタンが押されたとき */
+      jumpToDefaultCenter () {
+        if (this.mapData.defaultCenterLatLng) {
+          this.leaflet.center = [...this.mapData.defaultCenterLatLng]
+          this.leaflet.zoom = 15
+        } else {
+          this.defaultCenterDialog = true
+        }
+      },
+      /** 現在開いている地点を地図の中心として登録する */
+      registerDefaultCenter () {
+        this.mapData.defaultCenterLatLng = [...(this.leaflet.center as [number, number])]
+        Toast.show({ text: '地図の中心地を登録しました！' })
+      },
       /** 位置情報の許可を求める */
       async requestGeoPermission () {
         Geolocation.getCurrentPosition()
@@ -2264,6 +2323,11 @@ div(style="height: 100%; width: 100%")
             }
             // 差分マージ用ベースデータを保存
             this.serverBaseData = { ...this.mapData }
+            // defaultCenterLatLngが設定されている場合はそこにジャンプ
+            if (this.mapData.defaultCenterLatLng) {
+              this.leaflet.center = [...this.mapData.defaultCenterLatLng]
+              this.leaflet.zoom = 15
+            }
           }
         } catch (error: any) {
           // サーバーにも地図がなく、ローカルにもない場合は「見つかりません」エラー
