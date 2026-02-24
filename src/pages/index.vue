@@ -78,7 +78,11 @@ v-card(
           .mt-4
           p まだ地図がありません。右下のボタンから地図を作成してみましょう！
       //- お気に入りリストタブ
-      v-window-item(value="favorites" style="height: 100%; overflow-y: auto;")
+      v-window-item(
+        value="favorites"
+        style="height: 100%; overflow-y: auto;"
+        v-if="!myProfile.guest"
+        )
         .content
           p.mt-4 {{ favoritesList.length }}件のお気に入りがあります
           v-progress-linear(v-if="favoritesLoading" indeterminate)
