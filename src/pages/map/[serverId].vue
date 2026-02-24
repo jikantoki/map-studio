@@ -229,13 +229,6 @@ div(style="height: 100%; width: 100%")
         p マップ
       .button(
         v-ripple
-        @click="commentDialog = true"
-        style="opacity: 0.8;"
-        )
-        v-icon mdi-comment-outline
-        p コメント
-      .button(
-        v-ripple
         @click="optionsDialog = true"
         style="opacity: 0.8;"
         )
@@ -650,25 +643,12 @@ div(style="height: 100%; width: 100%")
         ) サーバーにアップロード
         v-list.options-list
           v-list-item.item(
-            @click="toggleFavorite"
-            v-if="!myProfile.guest"
-            )
-            .icon-and-text
-              v-icon(:color="isFavorite ? 'pink' : ''") {{ isFavorite ? 'mdi-heart' : 'mdi-heart-outline' }}
-              v-list-item-title {{ isFavorite ? 'お気に入りから削除' : 'お気に入りに追加' }}
-          v-list-item.item(
             @click="share(`https://map.enoki.xyz/map/${mapData.serverId}`, mapData.name)"
             v-if="!myProfile.guest"
             )
             .icon-and-text
               v-icon mdi-share-variant
               v-list-item-title この地図を共有する
-          v-list-item.item(
-            @click="mapQrDialog = true; optionsDialog = false"
-            )
-            .icon-and-text
-              v-icon mdi-qrcode
-              v-list-item-title この地図のQRコードを表示
   //- 編集モードを終了するか確認するダイアログ --
   v-dialog(
     v-model="editModeEndDialog"
@@ -1216,7 +1196,6 @@ div(style="height: 100%; width: 100%")
   import { Toast } from '@capacitor/toast'
 
   import { LIcon, LMap, LMarker, LPolyline, LTileLayer } from '@vue-leaflet/vue-leaflet'
-  import { defineComponent } from 'vue'
   import { Icon, Vue3IconPicker } from 'vue3-icon-picker'
   import { iconImages } from '@/js/iconImages'
   import muniArray from '@/js/muni'
@@ -1237,7 +1216,7 @@ div(style="height: 100%; width: 100%")
     latlng: [number, number]
   }
 
-  export default defineComponent({
+  export default {
     components: {
       LMap,
       LMarker,
@@ -1628,12 +1607,6 @@ div(style="height: 100%; width: 100%")
         } else if (this.claimOwnershipDialog) {
           /** 所有権移転確認ダイアログを閉じる */
           this.claimOwnershipDialog = false
-        } else if (this.mapQrDialog) {
-          /** QRコードダイアログを閉じる */
-          this.mapQrDialog = false
-        } else if (this.commentDialog) {
-          /** コメントダイアログを閉じる */
-          this.commentDialog = false
         } else if (this.optionsDialog) {
           /** オプションダイアログを閉じる */
           this.optionsDialog = false
@@ -1712,10 +1685,6 @@ div(style="height: 100%; width: 100%")
         } else {
           this.fetchMapFromServer(hasLocalData)
         }
-      }
-      // お気に入り状態を取得
-      if (!this.myProfile.guest && this.params && this.params !== 'create') {
-        this.fetchFavoriteStatus()
       }
     },
     unmounted () {
@@ -2260,60 +2229,8 @@ div(style="height: 100%; width: 100%")
           this.fetchMapLoading = false
         }
       },
-      /** お気に入り状態を取得する */
-      async fetchFavoriteStatus () {
-        const res = await this.sendAjaxWithAuth('/getFavorites.php', {
-          id: this.myProfile.userId,
-          token: this.myProfile.userToken,
-        }, null, false) as any
-        if (res && res.body && res.body.status === 'ok') {
-          this.isFavorite = res.body.favorites.some((f: any) => f.serverId === this.params)
-        }
-      },
-      /** お気に入りをトグルする */
-      async toggleFavorite () {
-        if (this.myProfile.guest) return
-        const res = await this.sendAjaxWithAuth('/favoriteMap.php', {
-          id: this.myProfile.userId,
-          token: this.myProfile.userToken,
-        }, { serverId: this.mapData.serverId }) as any
-        if (res && res.body && res.body.status === 'ok') {
-          this.isFavorite = res.body.action === 'added'
-        }
-      },
-      /** コメント一覧を取得する */
-      async fetchComments () {
-        if (!this.params || this.params === 'create') return
-        this.commentsLoading = true
-        const res = await this.sendAjaxWithAuth('/getComments.php', {
-          serverId: this.params,
-        }, null, false) as any
-        if (res && res.body && res.body.status === 'ok') {
-          this.comments = res.body.comments
-        }
-        this.commentsLoading = false
-      },
-      /** コメントを送信する */
-      async submitComment () {
-        const nospaceComment = this.newComment?.trim()
-        if (!nospaceComment) {
-          Toast.show({ text: 'コメントを入力してください。' })
-          return
-        }
-        if (!this.newComment || this.myProfile.guest) return
-        this.commentLoading = true
-        const res = await this.sendAjaxWithAuth('/addComment.php', {
-          id: this.myProfile.userId,
-          token: this.myProfile.userToken,
-        }, { serverId: this.mapData.serverId, comment: this.newComment }) as any
-        if (res && res.body && res.body.status === 'ok') {
-          this.newComment = ''
-          await this.fetchComments()
-        }
-        this.commentLoading = false
-      },
     },
-  })
+  }
 </script>
 
 <style lang="scss" scoped>
