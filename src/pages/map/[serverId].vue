@@ -1664,7 +1664,7 @@ div(style="height: 100%; width: 100%")
       }
       // お気に入り状態を取得
       if (!this.myProfile.guest && this.params && this.params !== 'create') {
-        this.fetchFavoriteStatus()
+        (this as any).fetchFavoriteStatus()
       }
     },
     unmounted () {
@@ -2210,53 +2210,53 @@ div(style="height: 100%; width: 100%")
         }
       },
     },
-      /** お気に入り状態を取得する */
-      async fetchFavoriteStatus () {
-        const res = await this.sendAjaxWithAuth('/getFavorites.php', {
-          id: this.myProfile.userId,
-          token: this.myProfile.userToken,
-        }, null, false) as any
-        if (res && res.body && res.body.status === 'ok') {
-          this.isFavorite = res.body.favorites.some((f: any) => f.serverId === this.params)
-        }
-      },
-      /** お気に入りをトグルする */
-      async toggleFavorite () {
-        if (this.myProfile.guest) return
-        const res = await this.sendAjaxWithAuth('/favoriteMap.php', {
-          id: this.myProfile.userId,
-          token: this.myProfile.userToken,
-        }, { serverId: this.mapData.serverId }) as any
-        if (res && res.body && res.body.status === 'ok') {
-          this.isFavorite = res.body.action === 'added'
-        }
-      },
-      /** コメント一覧を取得する */
-      async fetchComments () {
-        if (!this.params || this.params === 'create') return
-        this.commentsLoading = true
-        const res = await this.sendAjaxWithAuth('/getComments.php', {
-          serverId: this.params,
-        }, null, false) as any
-        if (res && res.body && res.body.status === 'ok') {
-          this.comments = res.body.comments
-        }
-        this.commentsLoading = false
-      },
-      /** コメントを送信する */
-      async submitComment () {
-        if (!this.newComment || this.myProfile.guest) return
-        this.commentLoading = true
-        const res = await this.sendAjaxWithAuth('/addComment.php', {
-          id: this.myProfile.userId,
-          token: this.myProfile.userToken,
-        }, { serverId: this.mapData.serverId, comment: this.newComment }) as any
-        if (res && res.body && res.body.status === 'ok') {
-          this.newComment = ''
-          await this.fetchComments()
-        }
-        this.commentLoading = false
-      },
+    /** お気に入り状態を取得する */
+    async fetchFavoriteStatus () {
+      const res = await this.sendAjaxWithAuth('/getFavorites.php', {
+        id: this.myProfile.userId,
+        token: this.myProfile.userToken,
+      }, null, false) as any
+      if (res && res.body && res.body.status === 'ok') {
+        this.isFavorite = res.body.favorites.some((f: any) => f.serverId === this.params)
+      }
+    },
+    /** お気に入りをトグルする */
+    async toggleFavorite () {
+      if (this.myProfile.guest) return
+      const res = await this.sendAjaxWithAuth('/favoriteMap.php', {
+        id: this.myProfile.userId,
+        token: this.myProfile.userToken,
+      }, { serverId: this.mapData.serverId }) as any
+      if (res && res.body && res.body.status === 'ok') {
+        this.isFavorite = res.body.action === 'added'
+      }
+    },
+    /** コメント一覧を取得する */
+    async fetchComments () {
+      if (!this.params || this.params === 'create') return
+      this.commentsLoading = true
+      const res = await this.sendAjaxWithAuth('/getComments.php', {
+        serverId: this.params,
+      }, null, false) as any
+      if (res && res.body && res.body.status === 'ok') {
+        this.comments = res.body.comments
+      }
+      this.commentsLoading = false
+    },
+    /** コメントを送信する */
+    async submitComment () {
+      if (!this.newComment || this.myProfile.guest) return
+      this.commentLoading = true
+      const res = await this.sendAjaxWithAuth('/addComment.php', {
+        id: this.myProfile.userId,
+        token: this.myProfile.userToken,
+      }, { serverId: this.mapData.serverId, comment: this.newComment }) as any
+      if (res && res.body && res.body.status === 'ok') {
+        this.newComment = ''
+        await (this as any).fetchComments()
+      }
+      this.commentLoading = false
+    },
   }
 </script>
 
