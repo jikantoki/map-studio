@@ -564,6 +564,7 @@ div(style="height: 100%; width: 100%")
             placeholder="例: 東京観光地図"
             variant="outlined"
             clearable
+            autocomplete="off"
           )
           v-text-field(
             v-model="mapData.serverId"
@@ -572,6 +573,7 @@ div(style="height: 100%; width: 100%")
             placeholder="例: tokyo-tourist-map"
             variant="outlined"
             clearable
+            autocomplete="off"
           )
           v-textarea(
             v-model="mapData.description"
@@ -606,6 +608,7 @@ div(style="height: 100%; width: 100%")
             chips
             multiple
             clearable
+            autocomplete="off"
           )
           v-combobox(
             v-model="mapData.editorUserIds"
@@ -616,6 +619,7 @@ div(style="height: 100%; width: 100%")
             chips
             multiple
             clearable
+            autocomplete="off"
           )
           v-text-field(
             v-if="settings.developerOptions.enabled"
@@ -624,6 +628,7 @@ div(style="height: 100%; width: 100%")
             placeholder="例: https://example.com/icon.png"
             variant="outlined"
             clearable
+            autocomplete="off"
           )
           v-btn.my-2(
             v-else
