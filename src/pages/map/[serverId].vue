@@ -2559,15 +2559,54 @@ div(style="height: 100%; width: 100%")
         }
         this.jsonImportLoading = true
         try {
-          const newPoints = importPoints.map((p: any) => ({ ...p, id: this.generateId() }))
-          const newLines = importLines.map((l: any) => ({ ...l, id: this.generateId() }))
-          this.mapData.points = [...this.mapData.points, ...newPoints]
-          this.mapData.lines = [...this.mapData.lines, ...newLines]
+          let addedPoints = 0
+          let updatedPoints = 0
+          let addedLines = 0
+          let updatedLines = 0
+
+          const mergedPoints = [...this.mapData.points]
+          for (const p of importPoints) {
+            if (p.id) {
+              const idx = mergedPoints.findIndex((existing: any) => existing.id === p.id)
+              if (idx === -1) {
+                mergedPoints.push({ ...p })
+                addedPoints++
+              } else {
+                mergedPoints[idx] = { ...p }
+                updatedPoints++
+              }
+            } else {
+              mergedPoints.push({ ...p, id: this.generateId() })
+              addedPoints++
+            }
+          }
+
+          const mergedLines = [...this.mapData.lines]
+          for (const l of importLines) {
+            if (l.id) {
+              const idx = mergedLines.findIndex((existing: any) => existing.id === l.id)
+              if (idx === -1) {
+                mergedLines.push({ ...l })
+                addedLines++
+              } else {
+                mergedLines[idx] = { ...l }
+                updatedLines++
+              }
+            } else {
+              mergedLines.push({ ...l, id: this.generateId() })
+              addedLines++
+            }
+          }
+
+          this.mapData.points = mergedPoints
+          this.mapData.lines = mergedLines
           this.performLocalSave()
           if (!this.myProfile.guest && !this.serverIdConflict) {
             await this.uploadMap()
           }
-          Toast.show({ text: `${newPoints.length}件の点と${newLines.length}件の線をインポートしました。` })
+          const addMsg = (addedPoints + addedLines > 0) ? `追加: 点${addedPoints}件・線${addedLines}件` : ''
+          const updMsg = (updatedPoints + updatedLines > 0) ? `更新: 点${updatedPoints}件・線${updatedLines}件` : ''
+          Toast.show({ text: [addMsg, updMsg].filter(Boolean).join('、') + 'インポートしました。' })
           this.jsonImportDialog = false
           this.jsonImportContent = ''
         } finally {
