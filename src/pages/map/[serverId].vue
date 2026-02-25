@@ -678,12 +678,14 @@ div(style="height: 100%; width: 100%")
               v-list-item-title JSONエクスポート
           v-list-item.item(
             @click="jsonImportDialog = true; optionsDialog = false"
+            v-if="isEditorable"
             )
             .icon-and-text
               v-icon mdi-import
               v-list-item-title JSONインポート
           v-list-item.item(
             @click="openImportFromMapDialog"
+            v-if="isEditorable"
             )
             .icon-and-text
               v-icon mdi-map-plus
@@ -1219,9 +1221,22 @@ div(style="height: 100%; width: 100%")
           variant="outlined"
           density="compact"
         )
-          | JSONの点と線のデータを現在の地図にマージします。既存のデータは削除されません。
+          | JSONの点と線のデータを現在の地図にマージします。IDが一致するデータは上書き更新されます。
           br
           | インポート後はサーバーに自動で同期されます。
+        v-checkbox(
+          v-model="jsonImportOverwriteSettings"
+          label="地図の設定（名前・説明・公開設定など）も上書きする"
+          density="compact"
+          hide-details
+        )
+        v-alert.my-3(
+          v-if="jsonImportOverwriteSettings"
+          type="error"
+          variant="outlined"
+          density="compact"
+        )
+          | 地図の名前・説明・ID・公開設定・アイコンなどすべての設定が上書きされます。元に戻せません。
         v-textarea(
           v-model="jsonImportContent"
           variant="outlined"
@@ -1252,7 +1267,7 @@ div(style="height: 100%; width: 100%")
           style="background-color: rgb(var(--v-theme-primary)); color: white;"
         ) インポート
         v-spacer
-        v-btn(@click="jsonImportDialog = false" prepend-icon="mdi-close") キャンセル
+        v-btn(@click="jsonImportDialog = false; jsonImportOverwriteSettings = false" prepend-icon="mdi-close") キャンセル
   //- この地図からインポートダイアログ
   v-dialog(
     v-model="importFromMapDialog"
@@ -1532,6 +1547,8 @@ div(style="height: 100%; width: 100%")
         jsonImportDialog: false,
         /** JSONインポートの入力内容 */
         jsonImportContent: '',
+        /** JSONインポート時に地図設定も上書きするか */
+        jsonImportOverwriteSettings: false,
         /** JSONインポート処理中フラグ */
         jsonImportLoading: false,
         /** この地図からインポートダイアログの表示フラグ */
@@ -1806,6 +1823,7 @@ div(style="height: 100%; width: 100%")
         } else if (this.jsonImportDialog) {
           /** JSONインポートダイアログを閉じる */
           this.jsonImportDialog = false
+          this.jsonImportOverwriteSettings = false
         } else if (this.importFromMapDialog) {
           /** この地図からインポートダイアログを閉じる */
           this.importFromMapDialog = false
@@ -2553,12 +2571,22 @@ div(style="height: 100%; width: 100%")
         }
         const importPoints = Array.isArray(parsed.points) ? parsed.points : []
         const importLines = Array.isArray(parsed.lines) ? parsed.lines : []
-        if (importPoints.length === 0 && importLines.length === 0) {
+        if (!this.jsonImportOverwriteSettings && importPoints.length === 0 && importLines.length === 0) {
           Toast.show({ text: '点と線のデータが見つかりませんでした。' })
           return
         }
         this.jsonImportLoading = true
         try {
+          // 地図設定の上書き
+          if (this.jsonImportOverwriteSettings) {
+            const settingsFields = ['name', 'description', 'serverId', 'isPublic', 'icon', 'sharedUserIds', 'editorUserIds'] as const
+            for (const field of settingsFields) {
+              if (parsed[field] !== undefined) {
+                (this.mapData as any)[field] = parsed[field]
+              }
+            }
+          }
+
           let addedPoints = 0
           let updatedPoints = 0
           let addedLines = 0
@@ -2606,9 +2634,11 @@ div(style="height: 100%; width: 100%")
           }
           const addMsg = (addedPoints + addedLines > 0) ? `追加: 点${addedPoints}件・線${addedLines}件` : ''
           const updMsg = (updatedPoints + updatedLines > 0) ? `更新: 点${updatedPoints}件・線${updatedLines}件` : ''
-          Toast.show({ text: [addMsg, updMsg].filter(Boolean).join('、') + 'インポートしました。' })
+          const settingsMsg = this.jsonImportOverwriteSettings ? '設定を上書き' : ''
+          Toast.show({ text: [settingsMsg, addMsg, updMsg].filter(Boolean).join('、') + 'インポートしました。' })
           this.jsonImportDialog = false
           this.jsonImportContent = ''
+          this.jsonImportOverwriteSettings = false
         } finally {
           this.jsonImportLoading = false
         }
