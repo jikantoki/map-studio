@@ -522,12 +522,19 @@ div(style="height: 100%; width: 100%")
         .account-details(
           style="display: flex; flex-direction: column; align-items: center; gap: 1em; margin-bottom: 1em;"
         )
-          .account-img
+          .account-img(style="position: relative; height: 8em; width: 8em;")
             img(
               :src="mapData.icon ? mapData.icon : '/icons/map.png'"
               style="height: 8em; width: 8em; border-radius: 9999px; background-color: white; border: solid 2px #000;"
               onerror="this.src='/icons/map.png'"
               )
+            .change-map-icon-button(
+              v-if="editMode"
+              v-ripple
+              @click="changeMapIcon()"
+              style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; height: 100%; border-radius: 9999px; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; cursor: pointer; color: #FFFFFF; font-size: 2em;"
+              )
+              v-icon(style="opacity: 0.7;") mdi-camera-flip
           .account-info(
             style="text-align: center;"
             v-if="!editMode"
@@ -1232,6 +1239,7 @@ div(style="height: 100%; width: 100%")
 <script lang="ts">
   import { App } from '@capacitor/app'
   import { Browser } from '@capacitor/browser'
+  import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
   import { Geolocation } from '@capacitor/geolocation'
   import { Share } from '@capacitor/share'
   import { Toast } from '@capacitor/toast'
@@ -1771,6 +1779,30 @@ div(style="height: 100%; width: 100%")
           this.iconImgDialog = true
         } else {
           this.selectedWaypoint!.iconImg = undefined
+        }
+      },
+      /** 地図のアイコン画像を変更する */
+      async changeMapIcon () {
+        const permission = await Camera.checkPermissions()
+        if (permission.camera !== 'granted' || permission.photos !== 'granted') {
+          await Camera.requestPermissions()
+        }
+        const image = await Camera.getPhoto({
+          quality: 100,
+          resultType: CameraResultType.DataUrl,
+          allowEditing: false,
+          saveToGallery: false,
+          width: 1600,
+          height: 1600,
+          source: CameraSource.Photos,
+          promptLabelHeader: '写真を使う',
+          promptLabelCancel: 'キャンセル',
+          promptLabelPhoto: 'アルバムから選択',
+          promptLabelPicture: '撮影',
+        })
+        const base64 = image.dataUrl
+        if (base64) {
+          this.mapData.icon = base64
         }
       },
       /** 画像アイコンを選択する */
