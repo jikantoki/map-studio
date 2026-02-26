@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- ホスト: localhost
--- 生成日時: 2026 年 2 月 24 日 04:12
+-- 生成日時: 2026 年 2 月 26 日 11:24
 -- サーバのバージョン： 5.7.44-log
 -- PHP のバージョン: 7.4.33
 
@@ -97,7 +97,10 @@ CREATE TABLE `mapList` (
   `sharedUserIds` text NOT NULL COMMENT '閲覧可能ユーザーIDカンマ区切り',
   `editorUserIds` text NOT NULL COMMENT '編集可能ユーザーIDカンマ区切り',
   `pointsList` text NOT NULL COMMENT '地点リストJSON',
-  `linesList` text NOT NULL COMMENT '線リストJSON'
+  `linesList` text NOT NULL COMMENT '線リストJSON',
+  `defaultCenterLat` double DEFAULT NULL COMMENT '地図を開いたときに表示する中心地の緯度',
+  `defaultCenterLng` double DEFAULT NULL COMMENT '地図を開いたときに表示する中心地の経度',
+  `defaultZoom` int(11) DEFAULT NULL COMMENT '地図を開いたときのズームレベル'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地図情報リスト';
 
 -- --------------------------------------------------------
