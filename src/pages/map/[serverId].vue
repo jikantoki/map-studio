@@ -863,7 +863,7 @@ div(style="height: 100%; width: 100%")
     max-width="400"
   )
     v-card
-      v-card-title(class="headline") 中心地が未設定です
+      v-card-title(class="headline") この地図は中心地が未設定です
       v-card-text
         p 地図の中心地を設定することでワンクリックで中心地に戻れます。
         p.mt-2 設定するには、編集モードのサーバー情報から「現在開いている地点を地図の中心として登録」を押してください。
@@ -1890,6 +1890,7 @@ div(style="height: 100%; width: 100%")
 
       /** 現在地を取得し、地図の中心も移動 */
       setTimeout(async () => {
+        if (!this.mapData.defaultCenterLatLng) return
         // defaultCenterLatLngが設定されている場合は現在地への移動をスキップ
         if (!this.mapData.defaultCenterLatLng[0] && !this.mapData.defaultCenterLatLng[1]) {
           await this.setCurrentPosition()
@@ -2300,8 +2301,7 @@ div(style="height: 100%; width: 100%")
       },
       /** 地図の中心地ボタンが押されたとき */
       jumpToDefaultCenter () {
-        console.log('デフォルト中心地にジャンプ:', this.mapData.defaultCenterLatLng)
-        if (this.mapData.defaultCenterLatLng[0] && this.mapData.defaultCenterLatLng[1]) {
+        if (this.mapData.defaultCenterLatLng && this.mapData.defaultCenterLatLng[0] && this.mapData.defaultCenterLatLng[1]) {
           this.leaflet.center = {
             lat: this.mapData.defaultCenterLatLng[0],
             lng: this.mapData.defaultCenterLatLng[1],
@@ -2575,7 +2575,7 @@ div(style="height: 100%; width: 100%")
       openCopyMapDialog () {
         this.copyMapForm = {
           name: `${this.mapData.name}のコピー`,
-          serverId: '',
+          serverId: `${this.mapData.serverId}-copy-${Math.random().toString(36).slice(2, 6)}`,
           description: this.mapData.description ?? '',
         }
         this.copyMapError = ''
