@@ -262,6 +262,15 @@ div(style="height: 100%; width: 100%")
         style="background-color: rgba(var(--v-theme-surface), 0.9);"
         )
         v-icon mdi-content-save
+    //-- 地図の中心地に移動ボタン --
+    .current-button
+      v-btn(
+        size="x-large"
+        icon
+        @click="jumpToDefaultCenter"
+        style="background-color: rgba(var(--v-theme-surface), 0.9);"
+        )
+        v-icon mdi-home-map-marker
     //-- 右下の現在地ボタン --
     .current-button
       v-btn(
@@ -294,7 +303,7 @@ div(style="height: 100%; width: 100%")
         )
         img(
           loading="lazy"
-          :src="myProfile && myProfile.icon ? myProfile.icon : '/icons/map.png'"
+          :src="mapData.icon ? mapData.icon : '/icons/map.png'"
           style="height: 4em; width: 4em; border-radius: 9999px; border: solid 2px #000; background-color: white;"
           onerror="this.src='/icons/map.png'"
           )
@@ -564,6 +573,7 @@ div(style="height: 100%; width: 100%")
             placeholder="例: 東京観光地図"
             variant="outlined"
             clearable
+            autocomplete="off"
           )
           v-text-field(
             v-model="mapData.serverId"
@@ -572,6 +582,7 @@ div(style="height: 100%; width: 100%")
             placeholder="例: tokyo-tourist-map"
             variant="outlined"
             clearable
+            autocomplete="off"
           )
           v-textarea(
             v-model="mapData.description"
@@ -606,6 +617,7 @@ div(style="height: 100%; width: 100%")
             chips
             multiple
             clearable
+            autocomplete="off"
           )
           v-combobox(
             v-model="mapData.editorUserIds"
@@ -616,6 +628,7 @@ div(style="height: 100%; width: 100%")
             chips
             multiple
             clearable
+            autocomplete="off"
           )
           v-text-field(
             v-if="settings.developerOptions.enabled"
@@ -624,9 +637,17 @@ div(style="height: 100%; width: 100%")
             placeholder="例: https://example.com/icon.png"
             variant="outlined"
             clearable
+            autocomplete="off"
           )
           v-btn.my-2(
-            v-else
+            v-if="isEditorable"
+            text
+            @click="registerDefaultCenter"
+            prepend-icon="mdi-home-map-marker"
+            style="background-color: rgba(var(--v-theme-secondary), 1); color: white;"
+          ) 現在開いている地点を地図の中心として登録
+          v-btn.my-2(
+            v-if="isEditorable"
             text
             @click="save"
             append-icon="mdi-content-save"
@@ -836,6 +857,23 @@ div(style="height: 100%; width: 100%")
           @click="editMode = false; editModeEndDialog = false"
           prepend-icon="mdi-check"
           ) ええで！
+  //- 地図の中心地が未設定の場合のダイアログ --
+  v-dialog(
+    v-model="defaultCenterDialog"
+    max-width="400"
+  )
+    v-card
+      v-card-title(class="headline") 中心地が未設定です
+      v-card-text
+        p 地図の中心地を設定することでワンクリックで中心地に戻れます。
+        p.mt-2 設定するには、編集モードのサーバー情報から「現在開いている地点を地図の中心として登録」を押してください。
+      v-card-actions
+        v-spacer
+        v-btn(
+          text
+          @click="defaultCenterDialog = false"
+          prepend-icon="mdi-close"
+          ) 閉じる
   //- 点を削除するか確認するダイアログ --
   v-dialog(
     v-model="deletePointDialog"
@@ -1257,7 +1295,7 @@ div(style="height: 100%; width: 100%")
     v-model="mapQrDialog"
     max-width="400"
   )
-    v-card
+    v-card(style="width: 80vw; max-width: 400px;")
       v-card-title この地図のQRコード
       v-card-text
         p.mb-4 以下のURLを共有してください
@@ -1399,12 +1437,15 @@ div(style="height: 100%; width: 100%")
         /** Leafletの設定 */
         leaflet: {
           zoom: 13,
-          center: [35.690_430_765_555_42, 139.700_211_526_229_54],
+          center: {
+            lat: 35.690_430_765_555_42,
+            lng: 139.700_211_526_229_54,
+          },
         },
         /** 位置情報利用許可ダイアログの表示フラグ */
         requestGeoPermissionDialog: false,
         /** 自分の現在地 */
-        myLocation: [0, 0],
+        myLocation: { lat: 0, lng: 0 } as { lat: number, lng: number },
         /** 詳細カードのターゲット */
         detailCardTarget: null as {
           iconMdi: string | undefined
@@ -1450,6 +1491,7 @@ div(style="height: 100%; width: 100%")
           createdAt: undefined,
           sharedUserIds: [],
           editorUserIds: [],
+          defaultCenterLatLng: [0, 0] as [number, number],
         } as Map,
         /** 保存ダイアログの表示フラグ */
         savedDialog: false,
@@ -1546,6 +1588,8 @@ div(style="height: 100%; width: 100%")
         deleteMapLoading: false,
         /** 地図削除エラーメッセージ */
         deleteMapError: '',
+        /** 地図の中心地が未設定のときに表示するダイアログフラグ */
+        defaultCenterDialog: false,
       }
     },
     computed: {
@@ -1846,7 +1890,10 @@ div(style="height: 100%; width: 100%")
 
       /** 現在地を取得し、地図の中心も移動 */
       setTimeout(async () => {
-        await this.setCurrentPosition()
+        // defaultCenterLatLngが設定されている場合は現在地への移動をスキップ
+        if (!this.mapData.defaultCenterLatLng[0] && !this.mapData.defaultCenterLatLng[1]) {
+          await this.setCurrentPosition()
+        }
       }, 1000)
 
       // 新規作成の場合は、地図データの初期値を設定
@@ -1865,6 +1912,16 @@ div(style="height: 100%; width: 100%")
           /** 後方互換: linesフィールドが存在しない場合は初期化 */
           if (!this.mapData.lines) {
             this.mapData.lines = []
+          }
+          /** ローカルにdefaultCenterLatLngが設定されている場合はそこにジャンプ */
+          if (this.mapData.defaultCenterLatLng) {
+            setTimeout(() => {
+              this.leaflet.center = {
+                lat: this.mapData.defaultCenterLatLng[0],
+                lng: this.mapData.defaultCenterLatLng[1],
+              }
+              this.leaflet.zoom = 15
+            }, 100)
           }
         }
         // サーバーから最新データを取得
@@ -2228,7 +2285,7 @@ div(style="height: 100%; width: 100%")
         if (position) {
           const lat: number = position.coords.latitude
           const lng: number = position.coords.longitude
-          this.myLocation = [lat, lng]
+          this.myLocation = { lat, lng }
         }
 
         return
@@ -2240,6 +2297,27 @@ div(style="height: 100%; width: 100%")
         /** バグるので0.5秒待つ */
         await new Promise(resolve => setTimeout(resolve, 500))
         this.leaflet.zoom = 15
+      },
+      /** 地図の中心地ボタンが押されたとき */
+      jumpToDefaultCenter () {
+        console.log('デフォルト中心地にジャンプ:', this.mapData.defaultCenterLatLng)
+        if (this.mapData.defaultCenterLatLng[0] && this.mapData.defaultCenterLatLng[1]) {
+          this.leaflet.center = {
+            lat: this.mapData.defaultCenterLatLng[0],
+            lng: this.mapData.defaultCenterLatLng[1],
+          }
+          this.leaflet.zoom = 15
+        } else {
+          this.defaultCenterDialog = true
+        }
+      },
+      /** 現在開いている地点を地図の中心として登録する */
+      registerDefaultCenter () {
+        this.mapData.defaultCenterLatLng = [
+          this.leaflet.center.lat,
+          this.leaflet.center.lng,
+        ]
+        Toast.show({ text: '地図の中心地を登録しました！' })
       },
       /** 位置情報の許可を求める */
       async requestGeoPermission () {
@@ -2416,6 +2494,14 @@ div(style="height: 100%; width: 100%")
             }
             // 差分マージ用ベースデータを保存
             this.serverBaseData = { ...this.mapData }
+            // defaultCenterLatLngが設定されている場合はそこにジャンプ
+            if (this.mapData.defaultCenterLatLng) {
+              this.leaflet.center = {
+                lat: this.mapData.defaultCenterLatLng[0],
+                lng: this.mapData.defaultCenterLatLng[1],
+              }
+              this.leaflet.zoom = 15
+            }
           }
         } catch (error: any) {
           // サーバーにも地図がなく、ローカルにもない場合は「見つかりません」エラー
