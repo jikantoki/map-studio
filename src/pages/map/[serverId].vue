@@ -1500,6 +1500,7 @@ div(style="height: 100%; width: 100%")
           sharedUserIds: [],
           editorUserIds: [],
           defaultCenterLatLng: [0, 0] as [number, number],
+          defaultZoom: 13,
         } as Map,
         /** 保存ダイアログの表示フラグ */
         savedDialog: false,
@@ -1791,7 +1792,7 @@ div(style="height: 100%; width: 100%")
         /** バグるので0.1秒待ってから地図の中心を設定 */
         setTimeout(() => {
           this.leaflet.center = this.myLocation
-          this.leaflet.zoom = 15
+          this.leaflet.zoom = this.mapData.defaultZoom || 13
         }, 100)
       }
 
@@ -1898,9 +1899,8 @@ div(style="height: 100%; width: 100%")
 
       /** 現在地を取得し、地図の中心も移動 */
       setTimeout(async () => {
-        if (!this.mapData.defaultCenterLatLng) return
         // defaultCenterLatLngが設定されている場合は現在地への移動をスキップ
-        if (!this.mapData.defaultCenterLatLng[0] && !this.mapData.defaultCenterLatLng[1]) {
+        if (this.mapData.defaultCenterLatLng[0] < 0 && this.mapData.defaultCenterLatLng[1] < 0) {
           await this.setCurrentPosition()
         }
       }, 1000)
@@ -1929,7 +1929,7 @@ div(style="height: 100%; width: 100%")
                 lat: this.mapData.defaultCenterLatLng[0],
                 lng: this.mapData.defaultCenterLatLng[1],
               }
-              this.leaflet.zoom = 15
+              this.leaflet.zoom = this.mapData.defaultZoom || 13
             }, 100)
           }
         }
@@ -1993,10 +1993,6 @@ div(style="height: 100%; width: 100%")
       },
       /** 地図のアイコン画像を変更する */
       async changeMapIcon () {
-        const permission = await Camera.checkPermissions()
-        if (permission.camera !== 'granted' || permission.photos !== 'granted') {
-          await Camera.requestPermissions()
-        }
         const image = await Camera.getPhoto({
           quality: 100,
           resultType: CameraResultType.DataUrl,
@@ -2338,7 +2334,7 @@ div(style="height: 100%; width: 100%")
             lat: this.mapData.defaultCenterLatLng[0],
             lng: this.mapData.defaultCenterLatLng[1],
           }
-          this.leaflet.zoom = 15
+          this.leaflet.zoom = this.mapData.defaultZoom || 13
         } else {
           this.defaultCenterDialog = true
         }
@@ -2349,6 +2345,7 @@ div(style="height: 100%; width: 100%")
           this.leaflet.center.lat,
           this.leaflet.center.lng,
         ]
+        this.mapData.defaultZoom = this.leaflet.zoom
         Toast.show({ text: '地図の中心地を登録しました！' })
       },
       /** 位置情報の許可を求める */
@@ -2532,7 +2529,7 @@ div(style="height: 100%; width: 100%")
                 lat: this.mapData.defaultCenterLatLng[0],
                 lng: this.mapData.defaultCenterLatLng[1],
               }
-              this.leaflet.zoom = 15
+              this.leaflet.zoom = this.mapData.defaultZoom || 13
             }
           }
         } catch (error: any) {

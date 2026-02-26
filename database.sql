@@ -99,8 +99,9 @@ CREATE TABLE `mapList` (
   `pointsList` text NOT NULL COMMENT '地点リストJSON',
   `linesList` text NOT NULL COMMENT '線リストJSON',
   `defaultCenterLat` double DEFAULT NULL COMMENT '地図を開いたときに表示する中心地の緯度',
-  `defaultCenterLng` double DEFAULT NULL COMMENT '地図を開いたときに表示する中心地の経度'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地図情報リスト';
+  `defaultCenterLng` double DEFAULT NULL COMMENT '地図を開いたときに表示する中心地の経度',
+  `defaultZoom` int DEFAULT NULL COMMENT '地図を開いたときのズームレベル'
+) ENGINE=InnoDB DEFAULT COMMENT='地図情報リスト';
 
 -- --------------------------------------------------------
 

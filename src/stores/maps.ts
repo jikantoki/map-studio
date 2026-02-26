@@ -75,6 +75,8 @@ export type Map = {
   editorUserIds: string[]
   /** 地図を開いたときに最初に表示する中心地 */
   defaultCenterLatLng: [lat: number, lng: number]
+  /** 地図を開いたときに最初に表示するズームレベル */
+  defaultZoom: number
 }
 
 export const useMapsStore = defineStore('maps', {

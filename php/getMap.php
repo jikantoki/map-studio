@@ -86,6 +86,10 @@ $defaultCenterLatLng = ($hasCenterLat && $hasCenterLng)
   ? [(float)$mapRecord['defaultCenterLat'], (float)$mapRecord['defaultCenterLng']]
   : null;
 
+// defaultZoomの組み立て
+$defaultZoom = isset($mapRecord['defaultZoom']) && $mapRecord['defaultZoom'] !== null;
+$defaultZoom = $defaultZoom ? (int)$mapRecord['defaultZoom'] : null;
+
 echo json_encode([
   'status' => 'ok',
   'reason' => 'ok',
@@ -102,5 +106,6 @@ echo json_encode([
     'points' => $points,
     'lines' => $lines,
     'defaultCenterLatLng' => $defaultCenterLatLng,
+    'defaultZoom' => $defaultZoom,
   ]
 ]);
