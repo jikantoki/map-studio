@@ -294,7 +294,7 @@ div(style="height: 100%; width: 100%")
         )
         img(
           loading="lazy"
-          :src="myProfile && myProfile.icon ? myProfile.icon : '/icons/map.png'"
+          :src="mapData.icon ? mapData.icon : '/icons/map.png'"
           style="height: 4em; width: 4em; border-radius: 9999px; border: solid 2px #000; background-color: white;"
           onerror="this.src='/icons/map.png'"
           )
