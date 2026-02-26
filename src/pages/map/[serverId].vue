@@ -699,6 +699,26 @@ div(style="height: 100%; width: 100%")
               v-icon mdi-qrcode
               v-list-item-title この地図のQRコードを表示
           v-list-item.item(
+            @click="openJsonExportDialog"
+            )
+            .icon-and-text
+              v-icon mdi-export
+              v-list-item-title JSONエクスポート
+          v-list-item.item(
+            @click="jsonImportDialog = true; optionsDialog = false"
+            v-if="isEditorable"
+            )
+            .icon-and-text
+              v-icon mdi-import
+              v-list-item-title JSONインポート
+          v-list-item.item(
+            @click="openImportFromMapDialog"
+            v-if="isEditorable"
+            )
+            .icon-and-text
+              v-icon mdi-map-plus
+              v-list-item-title この地図からインポート
+          v-list-item.item(
             @click="openCopyMapDialog"
             v-if="!myProfile.guest"
             )
@@ -1332,6 +1352,122 @@ div(style="height: 100%; width: 100%")
         ) 共有
         v-spacer
         v-btn(@click="mapQrDialog = false" prepend-icon="mdi-close") 閉じる
+  //- JSONエクスポートダイアログ
+  v-dialog(
+    v-model="jsonExportDialog"
+    max-width="600"
+  )
+    v-card
+      v-card-title JSONエクスポート
+      v-card-text
+        p.mb-2(style="font-size: 0.85em; color: rgba(var(--v-theme-on-surface), 0.6);") 以下のJSONをコピーするか、ファイルとしてダウンロードしてください。
+        v-textarea(
+          :model-value="jsonExportContent"
+          readonly
+          variant="outlined"
+          rows="10"
+          auto-grow
+          max-rows="20"
+          style="font-family: monospace; font-size: 0.8em;"
+        )
+      v-card-actions
+        v-btn(
+          @click="downloadJsonExport"
+          prepend-icon="mdi-download"
+          style="background-color: rgb(var(--v-theme-primary)); color: white;"
+        ) ダウンロード
+        v-spacer
+        v-btn(@click="jsonExportDialog = false" prepend-icon="mdi-close") 閉じる
+  //- JSONインポートダイアログ
+  v-dialog(
+    v-model="jsonImportDialog"
+    max-width="600"
+  )
+    v-card
+      v-card-title JSONインポート
+      v-card-text
+        v-alert.mb-4(
+          type="warning"
+          variant="outlined"
+          density="compact"
+        )
+          | JSONの点と線のデータを現在の地図にマージします。IDが一致するデータは上書き更新されます。
+          br
+          | インポート後はサーバーに自動で同期されます。
+        v-checkbox(
+          v-model="jsonImportOverwriteSettings"
+          label="地図の設定（名前・説明・公開設定など）も上書きする"
+          density="compact"
+          hide-details
+        )
+        v-alert.my-3(
+          v-if="jsonImportOverwriteSettings"
+          type="error"
+          variant="outlined"
+          density="compact"
+        )
+          | 地図の名前・説明・ID・公開設定・アイコンなどすべての設定が上書きされます。元に戻せません。
+        v-textarea(
+          v-model="jsonImportContent"
+          variant="outlined"
+          label="JSONを貼り付けるか、ファイルをアップロードしてください"
+          rows="10"
+          auto-grow
+          max-rows="20"
+          style="font-family: monospace; font-size: 0.8em;"
+        )
+        v-btn(
+          @click="triggerJsonFileUpload"
+          prepend-icon="mdi-upload"
+          variant="outlined"
+          style="width: 100%;"
+        ) JSONファイルをアップロード
+        input(
+          ref="jsonFileInput"
+          type="file"
+          accept=".json"
+          style="display: none;"
+          @change="onJsonFileSelected"
+        )
+      v-card-actions
+        v-btn(
+          @click="performJsonImport"
+          :loading="jsonImportLoading"
+          prepend-icon="mdi-import"
+          style="background-color: rgb(var(--v-theme-primary)); color: white;"
+        ) インポート
+        v-spacer
+        v-btn(@click="jsonImportDialog = false; jsonImportOverwriteSettings = false" prepend-icon="mdi-close") キャンセル
+  //- この地図からインポートダイアログ
+  v-dialog(
+    v-model="importFromMapDialog"
+    max-width="600"
+  )
+    v-card
+      v-card-title この地図からインポート
+      v-card-text
+        v-alert.mb-4(
+          type="info"
+          variant="outlined"
+          density="compact"
+        )
+          | 選択した地図の点と線のデータを現在の地図にマージします。既存のデータは削除されません。
+          br
+          | インポート後はサーバーに自動で同期されます。
+        p.mb-2(v-if="importableMapList.length === 0" style="color: rgba(var(--v-theme-on-surface), 0.6);") インポート可能な地図がありません。
+        v-list(v-else)
+          v-list-item(
+            v-for="m in importableMapList"
+            :key="m.serverId"
+            @click="performImportFromMap(m)"
+            :disabled="importFromMapLoading"
+            style="cursor: pointer; border-radius: 8px;"
+          )
+            v-list-item-title {{ m.name || '無題の地図' }}
+            v-list-item-subtitle {{ m.serverId }}
+      v-card-actions
+        v-spacer
+        v-btn(@click="importFromMapDialog = false" prepend-icon="mdi-close") 閉じる
   //- コメントダイアログ
   v-dialog(
     v-model="commentDialog"
@@ -1403,6 +1539,8 @@ div(style="height: 100%; width: 100%")
   import { App } from '@capacitor/app'
   import { Browser } from '@capacitor/browser'
   import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+  import { Capacitor } from '@capacitor/core'
+  import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
   import { Geolocation } from '@capacitor/geolocation'
   import { Share } from '@capacitor/share'
   import { Toast } from '@capacitor/toast'
@@ -1577,6 +1715,22 @@ div(style="height: 100%; width: 100%")
         commentLoading: false,
         /** QRコード読み込み中フラグ */
         qrLoading: false,
+        /** JSONエクスポートダイアログの表示フラグ */
+        jsonExportDialog: false,
+        /** JSONエクスポートの内容 */
+        jsonExportContent: '',
+        /** JSONインポートダイアログの表示フラグ */
+        jsonImportDialog: false,
+        /** JSONインポートの入力内容 */
+        jsonImportContent: '',
+        /** JSONインポート時に地図設定も上書きするか */
+        jsonImportOverwriteSettings: false,
+        /** JSONインポート処理中フラグ */
+        jsonImportLoading: false,
+        /** この地図からインポートダイアログの表示フラグ */
+        importFromMapDialog: false,
+        /** インポート処理中フラグ */
+        importFromMapLoading: false,
         /** 地図コピーダイアログ表示フラグ */
         copyMapDialog: false,
         /** 地図コピーフォームデータ */
@@ -1668,6 +1822,17 @@ div(style="height: 100%; width: 100%")
           }
         }
         return result
+      },
+      /** ローカルに保存されていて自分が編集可能な地図リスト（現在の地図を除く） */
+      importableMapList () {
+        const myUserId = this.myProfile.userId
+        return this.maps.maps.filter((m: any) => {
+          if (m.serverId === this.mapData.serverId) return false
+          if (m.ownerUserId === myUserId) return true
+          if (m.ownerUserId === 'guest') return true
+          if (m.editorUserIds && m.editorUserIds.includes(myUserId ?? '')) return true
+          return false
+        })
       },
     },
     watch: {
@@ -1857,6 +2022,16 @@ div(style="height: 100%; width: 100%")
         } else if (this.mapQrDialog) {
           /** QRコードダイアログを閉じる */
           this.mapQrDialog = false
+        } else if (this.jsonExportDialog) {
+          /** JSONエクスポートダイアログを閉じる */
+          this.jsonExportDialog = false
+        } else if (this.jsonImportDialog) {
+          /** JSONインポートダイアログを閉じる */
+          this.jsonImportDialog = false
+          this.jsonImportOverwriteSettings = false
+        } else if (this.importFromMapDialog) {
+          /** この地図からインポートダイアログを閉じる */
+          this.importFromMapDialog = false
         } else if (this.commentDialog) {
           /** コメントダイアログを閉じる */
           this.commentDialog = false
@@ -2599,6 +2774,166 @@ div(style="height: 100%; width: 100%")
           await this.fetchComments()
         }
         this.commentLoading = false
+      },
+      /** JSONエクスポートダイアログを開く */
+      openJsonExportDialog () {
+        this.jsonExportContent = JSON.stringify(this.mapData, null, 2)
+        this.jsonExportDialog = true
+        this.optionsDialog = false
+      },
+      /** JSONファイルをダウンロードまたはAndroidネイティブ保存する */
+      async downloadJsonExport () {
+        const now = new Date()
+        const pad = (n: number) => String(n).padStart(2, '0')
+        const datePart = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+        const timePart = `${pad(now.getHours())}${pad(now.getMinutes())}`
+        const fileName = `${this.mapData.serverId}-${datePart}-${timePart}.json`
+        if (Capacitor.getPlatform() === 'android') {
+          try {
+            await Filesystem.writeFile({
+              path: fileName,
+              data: this.jsonExportContent,
+              directory: Directory.Documents,
+              encoding: Encoding.UTF8,
+            })
+            Toast.show({ text: `ドキュメントに保存しました: ${fileName}` })
+          } catch {
+            Toast.show({ text: 'ファイルの保存に失敗しました。' })
+          }
+        } else {
+          const blob = new Blob([this.jsonExportContent], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = fileName
+          a.click()
+          URL.revokeObjectURL(url)
+        }
+      },
+      /** JSONファイル選択をトリガーする */
+      triggerJsonFileUpload () {
+        const input = this.$refs.jsonFileInput as HTMLInputElement | undefined
+        if (input) input.click()
+      },
+      /** JSONファイルが選択された時の処理 */
+      async onJsonFileSelected (event: Event) {
+        const file = (event.target as HTMLInputElement).files?.[0]
+        if (!file) return
+        this.jsonImportContent = await file.text()
+        // ファイル選択をリセットして同一ファイルの再選択を可能にする
+        ;(event.target as HTMLInputElement).value = ''
+      },
+      /** JSONインポートを実行する */
+      async performJsonImport () {
+        if (!this.jsonImportContent.trim()) {
+          Toast.show({ text: 'JSONを入力またはファイルをアップロードしてください。' })
+          return
+        }
+        let parsed: any
+        try {
+          parsed = JSON.parse(this.jsonImportContent)
+        } catch {
+          Toast.show({ text: 'JSONの形式が正しくありません。' })
+          return
+        }
+        const importPoints = Array.isArray(parsed.points) ? parsed.points : []
+        const importLines = Array.isArray(parsed.lines) ? parsed.lines : []
+        if (!this.jsonImportOverwriteSettings && importPoints.length === 0 && importLines.length === 0) {
+          Toast.show({ text: '点と線のデータが見つかりませんでした。' })
+          return
+        }
+        this.jsonImportLoading = true
+        try {
+          // 地図設定の上書き
+          if (this.jsonImportOverwriteSettings) {
+            const settingsFields = ['name', 'description', 'serverId', 'isPublic', 'icon', 'sharedUserIds', 'editorUserIds'] as const
+            for (const field of settingsFields) {
+              if (parsed[field] !== undefined) {
+                (this.mapData as any)[field] = parsed[field]
+              }
+            }
+          }
+
+          let addedPoints = 0
+          let updatedPoints = 0
+          let addedLines = 0
+          let updatedLines = 0
+
+          const mergedPoints = [...this.mapData.points]
+          for (const p of importPoints) {
+            if (p.id) {
+              const idx = mergedPoints.findIndex((existing: any) => existing.id === p.id)
+              if (idx === -1) {
+                mergedPoints.push({ ...p })
+                addedPoints++
+              } else {
+                mergedPoints[idx] = { ...p }
+                updatedPoints++
+              }
+            } else {
+              mergedPoints.push({ ...p, id: this.generateId() })
+              addedPoints++
+            }
+          }
+
+          const mergedLines = [...this.mapData.lines]
+          for (const l of importLines) {
+            if (l.id) {
+              const idx = mergedLines.findIndex((existing: any) => existing.id === l.id)
+              if (idx === -1) {
+                mergedLines.push({ ...l })
+                addedLines++
+              } else {
+                mergedLines[idx] = { ...l }
+                updatedLines++
+              }
+            } else {
+              mergedLines.push({ ...l, id: this.generateId() })
+              addedLines++
+            }
+          }
+
+          this.mapData.points = mergedPoints
+          this.mapData.lines = mergedLines
+          this.performLocalSave()
+          if (!this.myProfile.guest && !this.serverIdConflict) {
+            await this.uploadMap()
+          }
+          const addMsg = (addedPoints + addedLines > 0) ? `追加: 点${addedPoints}件・線${addedLines}件` : ''
+          const updMsg = (updatedPoints + updatedLines > 0) ? `更新: 点${updatedPoints}件・線${updatedLines}件` : ''
+          const settingsMsg = this.jsonImportOverwriteSettings ? '設定を上書き' : ''
+          Toast.show({ text: [settingsMsg, addMsg, updMsg].filter(Boolean).join('、') + 'インポートしました。' })
+          this.jsonImportDialog = false
+          this.jsonImportContent = ''
+          this.jsonImportOverwriteSettings = false
+        } finally {
+          this.jsonImportLoading = false
+        }
+      },
+      /** この地図からインポートダイアログを開く */
+      openImportFromMapDialog () {
+        this.importFromMapDialog = true
+        this.optionsDialog = false
+      },
+      /** 選択した地図から点と線をマージインポートする */
+      async performImportFromMap (sourceMap: any) {
+        this.importFromMapLoading = true
+        try {
+          const importPoints = Array.isArray(sourceMap.points) ? sourceMap.points : []
+          const importLines = Array.isArray(sourceMap.lines) ? sourceMap.lines : []
+          const newPoints = importPoints.map((p: any) => ({ ...p, id: this.generateId() }))
+          const newLines = importLines.map((l: any) => ({ ...l, id: this.generateId() }))
+          this.mapData.points = [...this.mapData.points, ...newPoints]
+          this.mapData.lines = [...this.mapData.lines, ...newLines]
+          this.performLocalSave()
+          if (!this.myProfile.guest && !this.serverIdConflict) {
+            await this.uploadMap()
+          }
+          Toast.show({ text: `${newPoints.length}件の点と${newLines.length}件の線をインポートしました。` })
+          this.importFromMapDialog = false
+        } finally {
+          this.importFromMapLoading = false
+        }
       },
       /** 地図コピーダイアログを開く */
       openCopyMapDialog () {
