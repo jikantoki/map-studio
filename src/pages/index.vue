@@ -77,6 +77,12 @@ v-card(
           p Map Studioへようこそ！地図を作成して友達と共有したり、みんなの地図を見たりできます。
           .mt-4
           p まだ地図がありません。右下のボタンから地図を作成してみましょう！
+          v-btn.mt-4(
+            prepend-icon="mdi-book-open-variant"
+            @click="$router.push('/tutorial')"
+            variant="outlined"
+            color="primary"
+            ) チュートリアルを開く
       //- お気に入りリストタブ
       v-window-item(
         value="favorites"
@@ -320,6 +326,10 @@ v-card(
             .icon-and-text
               v-icon mdi-account-multiple
               v-list-item-title 友達リスト
+          v-list-item.item( @click="optionsDialog = false; $router.push('/tutorial')" )
+            .icon-and-text
+              v-icon mdi-book-open-variant
+              v-list-item-title チュートリアルを表示
           v-list-item.item( @click="$router.push('/settings')" )
             .icon-and-text
               v-icon mdi-cog
