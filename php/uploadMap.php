@@ -24,7 +24,8 @@ require_once DIR_ROOT . '/php/functions/authAccountforUse.php'; //ログイン�
  * @param array $server
  * @return array マージ後のリスト
  */
-function mergeMapItems(array $base, array $local, array $server): array {
+function mergeMapItems(array $base, array $local, array $server): array
+{
   $baseById = [];
   foreach ($base as $item) {
     if (!empty($item['id'])) $baseById[$item['id']] = $item;
@@ -147,10 +148,11 @@ if (!$pdo) {
 }
 
 $description = $mapData['description'] ?? '';
-$iconUrl = $mapData['icon'] ?? '';
+$iconUrl = save_base64_image_to_server($mapData['icon'] ?? '') ?? '';
 $isPublic = isset($mapData['isPublic']) && $mapData['isPublic'] ? 1 : 0;
 $defaultCenterLat = isset($mapData['defaultCenterLatLng'][0]) ? (float)$mapData['defaultCenterLatLng'][0] : null;
 $defaultCenterLng = isset($mapData['defaultCenterLatLng'][1]) ? (float)$mapData['defaultCenterLatLng'][1] : null;
+$defaultZoom = isset($mapData['defaultZoom']) && $mapData['defaultZoom'] !== null ? (int)$mapData['defaultZoom'] : null;
 $sharedUserIds = '';
 if (is_array($mapData['sharedUserIds'] ?? null)) {
   $sharedUserIds = implode(',', array_filter(array_map('trim', array_map('strval', $mapData['sharedUserIds']))));
@@ -199,7 +201,7 @@ if ($existingMap) {
   // 既存マップを更新
   $randServerId = $existingMap['randServerId'];
   $stmt = $pdo->prepare(
-    'UPDATE mapList SET serverName=?, description=?, iconUrl=?, isPublic=?, sharedUserIds=?, editorUserIds=?, pointsList=?, linesList=?, defaultCenterLat=?, defaultCenterLng=? WHERE randServerId=?'
+    'UPDATE mapList SET serverName=?, description=?, iconUrl=?, isPublic=?, sharedUserIds=?, editorUserIds=?, pointsList=?, linesList=?, defaultCenterLat=?, defaultCenterLng=?, defaultZoom=? WHERE randServerId=?'
   );
   $stmt->execute([
     $serverName,
@@ -212,13 +214,14 @@ if ($existingMap) {
     $linesList,
     $defaultCenterLat,
     $defaultCenterLng,
+    $defaultZoom,
     $randServerId,
   ]);
 } else {
   // 新規マップを挿入
   $randServerId = SQLmakeRandomId('mapList', 'randServerId');
   $stmt = $pdo->prepare(
-    'INSERT INTO mapList (randServerId, randOwnerUserId, serverId, description, serverName, iconUrl, createdAt, isPublic, sharedUserIds, editorUserIds, pointsList, linesList, defaultCenterLat, defaultCenterLng) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+    'INSERT INTO mapList (randServerId, randOwnerUserId, serverId, description, serverName, iconUrl, createdAt, isPublic, sharedUserIds, editorUserIds, pointsList, linesList, defaultCenterLat, defaultCenterLng, defaultZoom) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
   );
   $stmt->execute([
     $randServerId,
@@ -235,6 +238,7 @@ if ($existingMap) {
     $linesList,
     $defaultCenterLat,
     $defaultCenterLng,
+    $defaultZoom,
   ]);
 }
 
