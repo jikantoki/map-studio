@@ -79,6 +79,13 @@ if (!is_array($lines)) {
   $lines = [];
 }
 
+// defaultCenterLatLngの組み立て
+$hasCenterLat = isset($mapRecord['defaultCenterLat']) && $mapRecord['defaultCenterLat'] !== null;
+$hasCenterLng = isset($mapRecord['defaultCenterLng']) && $mapRecord['defaultCenterLng'] !== null;
+$defaultCenterLatLng = ($hasCenterLat && $hasCenterLng)
+  ? [(float)$mapRecord['defaultCenterLat'], (float)$mapRecord['defaultCenterLng']]
+  : null;
+
 echo json_encode([
   'status' => 'ok',
   'reason' => 'ok',
@@ -94,5 +101,6 @@ echo json_encode([
     'editorUserIds' => $editorList,
     'points' => $points,
     'lines' => $lines,
+    'defaultCenterLatLng' => $defaultCenterLatLng,
   ]
 ]);

@@ -149,6 +149,8 @@ if (!$pdo) {
 $description = $mapData['description'] ?? '';
 $iconUrl = $mapData['icon'] ?? '';
 $isPublic = isset($mapData['isPublic']) && $mapData['isPublic'] ? 1 : 0;
+$defaultCenterLat = isset($mapData['defaultCenterLatLng'][0]) ? (float)$mapData['defaultCenterLatLng'][0] : null;
+$defaultCenterLng = isset($mapData['defaultCenterLatLng'][1]) ? (float)$mapData['defaultCenterLatLng'][1] : null;
 $sharedUserIds = '';
 if (is_array($mapData['sharedUserIds'] ?? null)) {
   $sharedUserIds = implode(',', array_filter(array_map('trim', array_map('strval', $mapData['sharedUserIds']))));
@@ -197,7 +199,7 @@ if ($existingMap) {
   // 既存マップを更新
   $randServerId = $existingMap['randServerId'];
   $stmt = $pdo->prepare(
-    'UPDATE mapList SET serverName=?, description=?, iconUrl=?, isPublic=?, sharedUserIds=?, editorUserIds=?, pointsList=?, linesList=? WHERE randServerId=?'
+    'UPDATE mapList SET serverName=?, description=?, iconUrl=?, isPublic=?, sharedUserIds=?, editorUserIds=?, pointsList=?, linesList=?, defaultCenterLat=?, defaultCenterLng=? WHERE randServerId=?'
   );
   $stmt->execute([
     $serverName,
@@ -208,13 +210,15 @@ if ($existingMap) {
     $editorUserIds,
     $pointsList,
     $linesList,
+    $defaultCenterLat,
+    $defaultCenterLng,
     $randServerId,
   ]);
 } else {
   // 新規マップを挿入
   $randServerId = SQLmakeRandomId('mapList', 'randServerId');
   $stmt = $pdo->prepare(
-    'INSERT INTO mapList (randServerId, randOwnerUserId, serverId, description, serverName, iconUrl, createdAt, isPublic, sharedUserIds, editorUserIds, pointsList, linesList) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+    'INSERT INTO mapList (randServerId, randOwnerUserId, serverId, description, serverName, iconUrl, createdAt, isPublic, sharedUserIds, editorUserIds, pointsList, linesList, defaultCenterLat, defaultCenterLng) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
   );
   $stmt->execute([
     $randServerId,
@@ -229,6 +233,8 @@ if ($existingMap) {
     $editorUserIds,
     $pointsList,
     $linesList,
+    $defaultCenterLat,
+    $defaultCenterLng,
   ]);
 }
 

@@ -40,7 +40,7 @@ router.isReady().then(() => {
 App.addListener('appUrlOpen', function (event: URLOpenListenerEvent) {
   const url = new URL(event.url)
   const slug = url.pathname
-  if (slug.startsWith('/user/') || slug.startsWith('/map/')) {
+  if (slug === '/' || slug.startsWith('/user/') || slug.startsWith('/map/')) {
     router.push(slug)
   } else if (slug) {
     Browser.open({ url: `https://map.enoki.xyz${slug}` })
