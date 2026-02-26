@@ -77,6 +77,7 @@ v-card(
           p Map Studioへようこそ！地図を作成して友達と共有したり、みんなの地図を見たりできます。
           .mt-4
           p まだ地図がありません。右下のボタンから地図を作成してみましょう！
+          .pa-8
       //- お気に入りリストタブ
       v-window-item(value="favorites" style="height: 100%; overflow-y: auto;")
         .content
@@ -113,6 +114,7 @@ v-card(
             v-if="!favoritesLoading && favoritesList.length === 0"
             style="opacity: 0.6;"
           ) お気に入りはまだありません
+        .ma-16.pa-8
       //- 公開地図タブ
       v-window-item(value="publicMaps" style="height: 100%; overflow-y: auto;")
         .content
@@ -171,6 +173,7 @@ v-card(
               @click="fetchPublicMaps(publicMapsPage + 1)"
             )
               v-icon mdi-chevron-right
+        .ma-16.pa-8
   //-- 下部のアクションバー --
   .action-bar
     .buttons

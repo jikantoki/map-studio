@@ -329,14 +329,6 @@ ALTER TABLE `mapList`
   ADD PRIMARY KEY (`randServerId`);
 
 --
--- mapListテーブルに地図の中心地カラムを追加
--- ※ 既存のデータベースに対して実行してください（新規作成の場合は上記のCREATE TABLEに既に含まれています）
---
-ALTER TABLE `mapList`
-  ADD COLUMN `defaultCenterLat` double DEFAULT NULL COMMENT '地図を開いたときに表示する中心地の緯度',
-  ADD COLUMN `defaultCenterLng` double DEFAULT NULL COMMENT '地図を開いたときに表示する中心地の経度';
-
---
 -- テーブルのインデックス `map_comment_list`
 --
 ALTER TABLE `map_comment_list`
