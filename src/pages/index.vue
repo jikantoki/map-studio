@@ -33,7 +33,7 @@ v-card(
             p(style="font-weight: bold; margin: 0;") アプリを入手する
             p(style="font-size: 0.85em; margin: 0; opacity: 0.9;") Google Play ストアからダウンロード
         .get-app-banner(
-          v-if="myProfile.guest && !maps.maps.length"
+          v-if="myProfile.guest"
           v-ripple
           @click="$router.push('/login')"
           style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px; background-color: rgb(var(--v-theme-primary)); color: white; margin: 0.5em;"
