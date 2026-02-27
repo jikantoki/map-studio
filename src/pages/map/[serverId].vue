@@ -685,6 +685,14 @@ div(style="height: 100%; width: 100%")
               v-icon(:color="isFavorite ? 'pink' : ''") {{ isFavorite ? 'mdi-heart' : 'mdi-heart-outline' }}
               v-list-item-title {{ isFavorite ? 'お気に入りから削除' : 'お気に入りに追加' }}
           v-list-item.item(
+            v-if="isWebAndMobile"
+            @click="openURL('https://play.google.com/store/apps/details?id=xyz.enoki.mapstudio')"
+            style="background-color: #01875f; color: white; border-radius: 12px;"
+            )
+            .icon-and-text
+              v-icon(color="white") mdi-google-play
+              v-list-item-title(style="color: white;") アプリを入手する
+          v-list-item.item(
             @click="share(`https://map.enoki.xyz/map/${mapData.serverId}`, mapData.name)"
             v-if="!myProfile.guest"
             )
@@ -1483,6 +1491,16 @@ div(style="height: 100%; width: 100%")
       v-card-text(
         style="height: calc(100% - 8em); overflow: hidden; position: relative;"
         )
+        .get-app-banner.mb-4(
+          v-if="isWebAndMobile"
+          v-ripple
+          @click="openURL('https://play.google.com/store/apps/details?id=xyz.enoki.mapstudio')"
+          style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px; background-color: #01875f; color: white;"
+        )
+          v-icon(size="x-large") mdi-google-play
+          .info
+            p(style="font-weight: bold; margin: 0;") アプリを入手する
+            p(style="font-size: 0.85em; margin: 0; opacity: 0.9;") Google Play ストアからダウンロード
         v-alert.mb-4(
           v-if="myProfile.guest"
           type="info"
@@ -1753,6 +1771,8 @@ div(style="height: 100%; width: 100%")
         deleteMapError: '',
         /** 地図の中心地が未設定のときに表示するダイアログフラグ */
         defaultCenterDialog: false,
+        /** ウィンドウ幅（モバイル判定用） */
+        windowWidth: window.innerWidth,
       }
     },
     computed: {
@@ -1765,6 +1785,10 @@ div(style="height: 100%; width: 100%")
           return true
         }
         return false
+      },
+      /** Webかつスマホサイズの場合にtrue */
+      isWebAndMobile (): boolean {
+        return Capacitor.getPlatform() === 'web' && this.windowWidth < 600
       },
       /** 全ての線の経由地点を線インデックス・地点インデックス付きでフラット化 */
       linesWaypointsFlat () {
@@ -1945,7 +1969,8 @@ div(style="height: 100%; width: 100%")
       // @ts-ignore
       this.env = import.meta.env as any
 
-      /** ルートパラメータ */
+      /** ウィンドウリサイズ時にウィンドウ幅を更新 */
+      window.addEventListener('resize', this.onWindowResize)
       const params = this.$route.params
       // @ts-ignore
       this.params = params['serverId'] as string
@@ -2134,8 +2159,13 @@ div(style="height: 100%; width: 100%")
     },
     unmounted () {
       App.removeAllListeners()
+      window.removeEventListener('resize', this.onWindowResize)
     },
     methods: {
+      /** ウィンドウリサイズハンドラ */
+      onWindowResize () {
+        this.windowWidth = window.innerWidth
+      },
       /** 地点のアイコン種別変更 */
       onPointIconTypeChange (type: string) {
         if (type === 'img') {
