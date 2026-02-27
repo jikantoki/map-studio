@@ -2386,6 +2386,7 @@ div(style="height: 100%; width: 100%")
         this.mapData.points = this.mapData.points.filter(point => point !== this.detailCardTarget)
         this.detailCardTarget = null
         this.deletePointDialog = false
+        this.save()
       },
       /** ピンを複製する（約100m東にずらして配置） */
       duplicatePoint () {
@@ -2414,6 +2415,7 @@ div(style="height: 100%; width: 100%")
         this.selectedLine = null
         this.selectedLineIndex = -1
         this.deleteLineDialog = false
+        this.save()
       },
       /** 確認ダイアログで承認後に経由地点を削除する */
       deleteWaypoint () {
@@ -2707,7 +2709,7 @@ div(style="height: 100%; width: 100%")
             headers.token = this.myProfile.userToken
           }
           const res = await this.sendAjaxWithAuth('/getMap.php', headers, null, false) as any
-          if (res.body.status === 'ok' && res.body.map) {
+          if (res.body.status === 'ok' && res.body.map && !this.uploadLoading) {
             const serverMap = res.body.map
             // IDを持っていないアイテムにIDを付与（後方互換）
             serverMap.points = this.ensureItemIds(serverMap.points ?? [])
