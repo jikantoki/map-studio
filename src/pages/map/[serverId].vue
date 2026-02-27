@@ -76,6 +76,19 @@ div(style="height: 100%; width: 100%")
       :weight="line.width ?? 4"
       @click="editMode ? (selectedLine = line, selectedLineIndex = lineIndex) : detailCardTarget = line"
     )
+    //- 線のクリック判定範囲を広げるための透明オーバーレイ（各方向6px）
+    LPolyline(
+      v-for="(line, lineIndex) in mapData.lines"
+      :key="`hit-line-${lineIndex}`"
+      :lat-lngs="catmullRomSpline(line.waypoints.map(w => w.latlng))"
+      :color="line.color ?? '#3388ff'"
+      :weight="(line.width ?? 4) + 12"
+      :opacity="0"
+      @ready="(layer) => { if (layer._path) layer._path.style.pointerEvents = 'stroke'; }"
+      @click="editMode ? (selectedLine = line, selectedLineIndex = lineIndex) : detailCardTarget = line"
+    )
+    //- (注) opacity=0でも pointer-events:stroke により透明オーバーレイ上でのクリックが有効。
+    //- +12は各方向6pxの拡張（左右合計12px）を意味する。
     //- 編集モード時の経由地点マーカー
     template
       LMarker(
