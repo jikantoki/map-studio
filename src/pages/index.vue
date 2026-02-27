@@ -789,10 +789,16 @@ v-card(
   }
 }
 
+.map-info {
+  min-width: 0;
+}
+
 .name-space {
   font-size: 16px;
   font-weight: 500;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   -webkit-text-stroke: 2px black;
   paint-order: stroke;
   color: white;
