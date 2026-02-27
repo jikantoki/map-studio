@@ -22,6 +22,26 @@ v-card(
       )
       v-window-item(value="myMaps" style="height: 100%; overflow-y: auto;")
         v-progress-linear(v-if="myMapsLoading" indeterminate)
+        .get-app-banner(
+          v-if="isWebAndMobile"
+          v-ripple
+          @click="openURL('https://play.google.com/store/apps/details?id=xyz.enoki.mapstudio')"
+          style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px; background-color: #01875f; color: white; margin: 0.5em;"
+        )
+          v-icon(size="x-large") mdi-google-play
+          .info
+            p(style="font-weight: bold; margin: 0;") アプリを入手する
+            p(style="font-size: 0.85em; margin: 0; opacity: 0.9;") Google Play ストアからダウンロード
+        .get-app-banner(
+          v-if="myProfile.guest"
+          v-ripple
+          @click="$router.push('/login')"
+          style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px; background-color: rgb(var(--v-theme-primary)); color: white; margin: 0.5em;"
+        )
+          v-icon(size="x-large") mdi-login
+          .info
+            p(style="font-weight: bold; margin: 0;") ログイン
+            p(style="font-size: 0.85em; margin: 0; opacity: 0.9;") ログインして地図を管理・共有しよう
         .content(v-if="maps.maps.length")
           p.mt-4 {{ maps.maps.length }}件の地図があります
           .map-card(
@@ -401,6 +421,7 @@ v-card(
 <script lang="ts">
   import { App } from '@capacitor/app'
   import { Browser } from '@capacitor/browser'
+  import { Capacitor } from '@capacitor/core'
   import { Share } from '@capacitor/share'
 
   // @ts-ignore
@@ -462,9 +483,16 @@ v-card(
         favoritesLoading: false,
         /** 自分の地図リスト読み込み中フラグ */
         myMapsLoading: false,
+        /** ウィンドウ幅（モバイル判定用） */
+        windowWidth: window.innerWidth,
       }
     },
-    computed: {},
+    computed: {
+      /** Webかつスマホサイズの場合にtrue */
+      isWebAndMobile (): boolean {
+        return Capacitor.getPlatform() === 'web' && this.windowWidth < 600
+      },
+    },
     watch: {
       /** ようこそ画面の表示状態を保存 */
       optionsDialog: {
@@ -486,6 +514,9 @@ v-card(
     async mounted () {
       // @ts-ignore
       this.env = import.meta.env as any
+
+      /** ウィンドウリサイズ時にウィンドウ幅を更新 */
+      window.addEventListener('resize', this.onWindowResize)
 
       /** ようこその復活 */
       const welcomeDialog = localStorage.getItem('welcomeDialog')
@@ -561,8 +592,13 @@ v-card(
     },
     unmounted () {
       App.removeAllListeners()
+      window.removeEventListener('resize', this.onWindowResize)
     },
     methods: {
+      /** ウィンドウリサイズハンドラ */
+      onWindowResize () {
+        this.windowWidth = window.innerWidth
+      },
       /** 秒比較 */
       diffSeconds (date: Date | null | undefined) {
         if (!date) {
@@ -753,10 +789,16 @@ v-card(
   }
 }
 
+.map-info {
+  min-width: 0;
+}
+
 .name-space {
   font-size: 16px;
   font-weight: 500;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   -webkit-text-stroke: 2px black;
   paint-order: stroke;
   color: white;
