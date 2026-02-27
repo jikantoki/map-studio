@@ -32,6 +32,16 @@ v-card(
           .info
             p(style="font-weight: bold; margin: 0;") アプリを入手する
             p(style="font-size: 0.85em; margin: 0; opacity: 0.9;") Google Play ストアからダウンロード
+        .get-app-banner(
+          v-if="myProfile.guest && !maps.maps.length"
+          v-ripple
+          @click="$router.push('/login')"
+          style="cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 1em; padding: 1em; border-radius: 12px; background-color: rgb(var(--v-theme-primary)); color: white; margin: 0.5em;"
+        )
+          v-icon(size="x-large") mdi-login
+          .info
+            p(style="font-weight: bold; margin: 0;") ログイン
+            p(style="font-size: 0.85em; margin: 0; opacity: 0.9;") ログインして地図を管理・共有しよう
         .content(v-if="maps.maps.length")
           p.mt-4 {{ maps.maps.length }}件の地図があります
           .map-card(
@@ -93,12 +103,6 @@ v-card(
             variant="outlined"
             color="primary"
             ) チュートリアルを開く
-          v-btn.mt-4(
-            v-if="myProfile.guest"
-            prepend-icon="mdi-login"
-            @click="$router.push('/login')"
-            style="background-color: rgb(var(--v-theme-primary)); color: white;"
-            ) ログイン
           .pa-8
       //- お気に入りリストタブ
       v-window-item(
